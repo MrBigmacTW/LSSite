@@ -49,23 +49,25 @@ export async function composeMockup(
 ): Promise<Buffer> {
   const { x, y, width, height } = template.printArea;
 
-  // 將設計圖 resize 到 printArea 大小
+  // 將設計圖 resize 到 printArea 大小，確保有 alpha 通道
   const resizedDesign = await sharp(designBuffer)
     .resize(width, height, {
       fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      background: { r: 255, g: 255, b: 255, alpha: 0 },
     })
+    .ensureAlpha()
     .toBuffer();
 
   // 載入模板底圖
   const baseBuffer = await loadImage(template.imagePath);
 
-  // 合成
+  // 合成 — 用 multiply 混合讓設計看起來像印在布上（布紋會透出來）
   const mockupBuffer = await sharp(baseBuffer)
     .composite([{
       input: resizedDesign,
       left: x,
       top: y,
+      blend: "multiply" as const,
     }])
     .jpeg({ quality: 90 })
     .toBuffer();
