@@ -1,0 +1,68 @@
+{
+  "styles": [
+    {
+      "id": "japanese",
+      "name": "日系插畫",
+      "prompt_prefix": "Japanese illustration style, ukiyo-e inspired, bold ink outlines, flat color areas,",
+      "prompt_suffix": "clean white background, suitable for t-shirt print, high contrast, vector-clean edges",
+      "themes": ["koi fish", "cherry blossom", "dragon", "wave", "crane", "temple", "samurai", "tanuki", "daruma", "oni mask"],
+      "color_moods": ["indigo and vermillion", "sumi ink monochrome", "pastel watercolor", "gold and black"]
+    },
+    {
+      "id": "street",
+      "name": "街頭塗鴉",
+      "prompt_prefix": "Urban street art style, graffiti-inspired, spray paint texture, bold graphic,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, high resolution, crisp details",
+      "themes": ["skull with flowers", "boombox", "sneakers", "wildcat", "cityscape silhouette", "masked character", "eye", "hand gestures", "arcade", "cassette tape"],
+      "color_moods": ["neon on dark", "primary colors pop art", "monochrome with one accent", "pastel graffiti"]
+    },
+    {
+      "id": "minimal",
+      "name": "極簡線條",
+      "prompt_prefix": "Minimalist line art, single continuous line drawing, elegant simplicity,",
+      "prompt_suffix": "clean white background, suitable for t-shirt print, thin precise lines, breathable composition",
+      "themes": ["face portrait", "hands", "cat", "mountain landscape", "coffee cup", "bicycle", "plant", "geometric animal", "moon phases", "abstract body"],
+      "color_moods": ["black line only", "single color line", "thin blue line", "red accent on black"]
+    },
+    {
+      "id": "illustration",
+      "name": "手繪插畫",
+      "prompt_prefix": "Hand-drawn illustration style, whimsical character design, storybook quality,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, charming details, balanced composition",
+      "themes": ["whale in space", "mushroom forest", "robot gardening", "fox reading books", "octopus chef", "bear astronaut", "owl librarian", "sloth on vacation", "penguin adventure", "cat wizard"],
+      "color_moods": ["warm earthy tones", "cool ocean palette", "sunset gradient", "muted vintage"]
+    },
+    {
+      "id": "retro",
+      "name": "復古風",
+      "prompt_prefix": "Retro vintage style, 70s-80s aesthetic, nostalgic color palette,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, screen-print texture, vintage poster feel",
+      "themes": ["sunset with palm trees", "retro car", "vinyl record", "roller skates", "arcade game", "cassette mixtape", "vintage TV", "diner scene", "space exploration", "surf culture"],
+      "color_moods": ["burnt orange and teal", "faded pastel rainbow", "sepia tones", "neon 80s"]
+    },
+    {
+      "id": "nature",
+      "name": "自然元素",
+      "prompt_prefix": "Nature-inspired art, botanical illustration meets modern design,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, detailed organic forms, balanced layout",
+      "themes": ["monstera leaves", "coral reef", "butterfly collection", "mushroom varieties", "wildflower bouquet", "tree rings cross-section", "crystal formations", "feathers", "cactus garden", "moth and moon"],
+      "color_moods": ["forest green palette", "ocean blues", "earth tones", "black and botanical green"]
+    },
+    {
+      "id": "abstract",
+      "name": "抽象藝術",
+      "prompt_prefix": "Abstract modern art, geometric shapes and organic forms, contemporary gallery style,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, bold composition, museum quality",
+      "themes": ["overlapping circles", "fluid marble", "deconstructed face", "color blocks", "wave patterns", "spiral forms", "fragmented geometry", "dot matrix", "brushstroke explosion", "topographic lines"],
+      "color_moods": ["primary bold", "monochrome gradient", "earth and neon contrast", "pastel abstract"]
+    },
+    {
+      "id": "typography",
+      "name": "文字設計",
+      "prompt_prefix": "Typographic art, creative lettering, text as visual element,",
+      "prompt_suffix": "clean background, suitable for t-shirt print, readable yet artistic, strong visual impact",
+      "themes": ["inspirational word art", "kanji calligraphy modern", "stacked typography", "letter portrait", "word cloud shape", "graffiti lettering", "pixel font art", "hand-lettered quote", "3D text illusion", "deconstructed alphabet"],
+      "color_moods": ["black and white bold", "gradient fill text", "neon outline", "vintage ink"]
+    }
+  ]
+}
