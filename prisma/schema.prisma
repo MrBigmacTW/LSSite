@@ -14,8 +14,8 @@ model Product {
   tags            String    @default("[]") // JSON array: ["street", "minimal"]
   designImage     String    // 原始設計圖路徑
   mockups         String    @default("[]") // JSON array: [{ template, path }]
-  price           Float?    // 預留 v2
-  sku             String?   // 預留 v2
+  price           Int       @default(1280) // 售價（NT$）
+  sku             String?
   status          String    @default("pending_review")
   // status: draft | pending_review | published | rejected | archived
   rejectionReason String?
@@ -40,6 +40,36 @@ model ApiKey {
   permissions String   @default("[\"create\",\"read\"]") // JSON array
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNo     String      @unique
+  items       OrderItem[]
+  name        String
+  phone       String
+  email       String
+  address     String
+  status      String      @default("pending")
+  // pending | paid | shipped | completed | cancelled
+  totalAmount Int
+  paymentType String?
+  tradeNo     String?
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id])
+  productId String
+  title     String
+  size      String
+  quantity  Int
+  price     Int
+  mockupUrl String?
 }
 
 model MockupTemplate {

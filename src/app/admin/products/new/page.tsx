@@ -12,6 +12,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("1280");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,7 @@ export default function NewProductPage() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
+    formData.append("price", price);
     formData.append("tags", JSON.stringify(selectedTags));
     formData.append("source", "manual");
     formData.append("design_image", file);
@@ -65,6 +67,22 @@ export default function NewProductPage() {
             required
             className="w-full px-4 py-3 bg-bg2 border border-bg3 text-fg text-sm focus:border-accent outline-none transition-colors"
             placeholder="設計名稱"
+          />
+        </div>
+
+        {/* Price */}
+        <div>
+          <label className="block font-mono text-[11px] text-fg3 uppercase tracking-[1px] mb-2">
+            價格 (NT$)
+          </label>
+          <input
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            min="0"
+            className="w-full px-4 py-3 bg-bg2 border border-bg3 text-fg text-sm focus:border-accent outline-none transition-colors"
+            placeholder="1280"
           />
         </div>
 

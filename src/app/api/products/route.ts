@@ -59,10 +59,12 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
+  const priceRaw = formData.get("price") as string;
   const tagsRaw = formData.get("tags") as string;
   const source = (formData.get("source") as string) || "manual";
   const aiMetadata = (formData.get("ai_metadata") as string) || undefined;
   const designFile = formData.get("design_image") as File | null;
+  const price = priceRaw ? parseInt(priceRaw) : 1280;
 
   if (!title) {
     return NextResponse.json({ error: "title 為必填" }, { status: 400 });
@@ -91,6 +93,7 @@ export async function POST(req: NextRequest) {
     data: {
       title,
       description,
+      price,
       tags: JSON.stringify(tags),
       source,
       aiMetadata: aiMetadata || undefined,

@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useCart } from "@/lib/cart-context";
 
 const NAV_LINKS = [
-  { href: "/#gallery", label: "Gallery" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/#about", label: "About" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { totalItems } = useCart();
 
   return (
     <nav className="w-full px-6 md:px-12 py-6 flex items-center justify-between">
@@ -31,18 +32,40 @@ export default function Navbar() {
             {link.label}
           </Link>
         ))}
+        {/* Cart */}
+        <Link
+          href="/cart"
+          className="relative font-mono text-[12px] uppercase tracking-[1px] text-fg3 hover:text-fg transition-colors duration-300"
+        >
+          Cart
+          {totalItems > 0 && (
+            <span className="absolute -top-2 -right-4 w-4 h-4 bg-accent text-white text-[9px] flex items-center justify-center rounded-full">
+              {totalItems}
+            </span>
+          )}
+        </Link>
       </div>
 
       {/* Mobile hamburger */}
-      <button
-        className="md:hidden flex flex-col gap-[5px] p-2"
-        onClick={() => setMenuOpen(!menuOpen)}
-        aria-label="Toggle menu"
-      >
-        <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-[6.5px]" : ""}`} />
-        <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-        <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-[6.5px]" : ""}`} />
-      </button>
+      <div className="flex items-center gap-4 md:hidden">
+        <Link href="/cart" className="relative p-2">
+          <span className="font-mono text-[12px] text-fg3">Cart</span>
+          {totalItems > 0 && (
+            <span className="absolute -top-0.5 -right-1 w-4 h-4 bg-accent text-white text-[9px] flex items-center justify-center rounded-full">
+              {totalItems}
+            </span>
+          )}
+        </Link>
+        <button
+          className="flex flex-col gap-[5px] p-2"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-[6.5px]" : ""}`} />
+          <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+          <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-[6.5px]" : ""}`} />
+        </button>
+      </div>
 
       {/* Mobile menu overlay */}
       {menuOpen && (

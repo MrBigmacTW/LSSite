@@ -1,0 +1,55 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import FilterBar from "@/components/FilterBar";
+import GalleryCard, { type GalleryItem } from "@/components/GalleryCard";
+
+interface Props {
+  items: GalleryItem[];
+  initialStyle: string;
+}
+
+export default function GalleryPageContent({ items, initialStyle }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [filter, setFilter] = useState(initialStyle);
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return items;
+    return items.filter((item) =>
+      item.tags.some((tag) => tag.toLowerCase() === filter)
+    );
+  }, [filter, items]);
+
+  function handleFilterChange(style: string) {
+    setFilter(style);
+    const params = new URLSearchParams(searchParams.toString());
+    if (style === "all") {
+      params.delete("style");
+    } else {
+      params.set("style", style);
+    }
+    router.replace(`/gallery?${params.toString()}`, { scroll: false });
+  }
+
+  return (
+    <div>
+      <div className="mb-8">
+        <FilterBar active={filter} onChange={handleFilterChange} />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="font-mono text-fg3 text-sm">目前這個風格還沒有商品</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+          {filtered.map((item) => (
+            <GalleryCard key={item.id} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

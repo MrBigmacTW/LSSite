@@ -9,7 +9,7 @@ export interface GalleryItem {
   titleEn?: string;
   tags: string[];
   thumbnailUrl: string;
-  model?: string;
+  price?: number;
   date?: string;
 }
 
@@ -44,6 +44,13 @@ export default function GalleryCard({ item, featured }: GalleryCardProps) {
       {item.tags[0] && (
         <span className="absolute top-3 left-3 z-10 px-2 py-1 font-mono text-[9px] uppercase tracking-[1px] text-accent border border-accent/30 bg-bg/60 backdrop-blur-sm">
           {item.tags[0]}
+        </span>
+      )}
+
+      {/* Price — top right */}
+      {item.price != null && (
+        <span className="absolute top-3 right-3 z-10 px-2 py-1 font-mono text-[11px] text-fg bg-bg/70 backdrop-blur-sm">
+          NT$ {item.price.toLocaleString()}
         </span>
       )}
 

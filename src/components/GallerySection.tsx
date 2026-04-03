@@ -1,94 +1,23 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import FilterBar from "./FilterBar";
 import GalleryCard, { type GalleryItem } from "./GalleryCard";
 
-// Placeholder data — will be replaced with API data
-const PLACEHOLDER_ITEMS: GalleryItem[] = [
-  {
-    id: "1",
-    title: "星空鯨魚",
-    titleEn: "Cosmic Whale",
-    tags: ["illustration", "nature"],
-    thumbnailUrl: "/placeholder/1.svg",
-    model: "Flux 2 Pro",
-    date: "2026.04.01",
-  },
-  {
-    id: "2",
-    title: "浮世繪龍蝦",
-    titleEn: "Ukiyo-e Lobster",
-    tags: ["japanese"],
-    thumbnailUrl: "/placeholder/2.svg",
-    model: "Flux 2 Pro",
-    date: "2026.04.02",
-  },
-  {
-    id: "3",
-    title: "霓虹街頭",
-    titleEn: "Neon Streets",
-    tags: ["street"],
-    thumbnailUrl: "/placeholder/3.svg",
-    model: "Ideogram",
-    date: "2026.04.02",
-  },
-  {
-    id: "4",
-    title: "幾何之心",
-    titleEn: "Geometric Heart",
-    tags: ["minimal", "abstract"],
-    thumbnailUrl: "/placeholder/4.svg",
-    model: "Flux 2 Pro",
-    date: "2026.04.03",
-  },
-  {
-    id: "5",
-    title: "復古日落",
-    titleEn: "Retro Sunset",
-    tags: ["retro"],
-    thumbnailUrl: "/placeholder/5.svg",
-    model: "GPT Image",
-    date: "2026.04.03",
-  },
-  {
-    id: "6",
-    title: "字型實驗 #01",
-    titleEn: "Type Experiment #01",
-    tags: ["typography"],
-    thumbnailUrl: "/placeholder/6.svg",
-    model: "Ideogram",
-    date: "2026.04.03",
-  },
-  {
-    id: "7",
-    title: "熱帶花園",
-    titleEn: "Tropical Garden",
-    tags: ["nature", "illustration"],
-    thumbnailUrl: "/placeholder/7.svg",
-    model: "Flux 2 Pro",
-    date: "2026.04.03",
-  },
-  {
-    id: "8",
-    title: "抽象波紋",
-    titleEn: "Abstract Ripples",
-    tags: ["abstract"],
-    thumbnailUrl: "/placeholder/8.svg",
-    model: "Flux 2 Pro",
-    date: "2026.04.03",
-  },
-];
+interface GallerySectionProps {
+  items: GalleryItem[];
+}
 
-export default function GallerySection() {
+export default function GallerySection({ items }: GallerySectionProps) {
   const [filter, setFilter] = useState("all");
 
   const filteredItems = useMemo(() => {
-    if (filter === "all") return PLACEHOLDER_ITEMS;
-    return PLACEHOLDER_ITEMS.filter((item) =>
+    if (filter === "all") return items;
+    return items.filter((item) =>
       item.tags.some((tag) => tag.toLowerCase() === filter)
     );
-  }, [filter]);
+  }, [filter, items]);
 
   return (
     <section id="gallery" className="px-5 md:px-12 py-24 md:py-32">
@@ -102,10 +31,26 @@ export default function GallerySection() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        {filteredItems.map((item, i) => (
-          <GalleryCard key={item.id} item={item} featured={i === 0} />
-        ))}
+      {filteredItems.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="font-mono text-fg3 text-sm">目前這個風格還沒有商品</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+          {filteredItems.map((item, i) => (
+            <GalleryCard key={item.id} item={item} featured={i === 0} />
+          ))}
+        </div>
+      )}
+
+      {/* View all link */}
+      <div className="text-center mt-12">
+        <Link
+          href="/gallery"
+          className="font-mono text-[12px] text-fg3 hover:text-fg transition-colors uppercase tracking-[2px] border-b border-fg3/30 pb-1"
+        >
+          View all designs →
+        </Link>
       </div>
     </section>
   );

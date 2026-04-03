@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MockupViewer from "@/components/MockupViewer";
+import AddToCartButton from "@/components/AddToCartButton";
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -18,7 +19,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const tags = JSON.parse(product.tags) as string[];
   const mockups = JSON.parse(product.mockups) as { template: string; path: string }[];
-  const aiMeta = product.aiMetadata ? JSON.parse(product.aiMetadata) as Record<string, string> : null;
 
   return (
     <>
@@ -53,6 +53,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
               {product.title}
             </h1>
 
+            {/* Price */}
+            <p className="font-display text-[24px] font-semibold text-fg">
+              NT$ {product.price.toLocaleString()}
+            </p>
+
             {/* Divider */}
             <div className="w-full h-px bg-bg3" />
 
@@ -63,41 +68,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </p>
             )}
 
-            {/* Creation Metadata */}
-            {aiMeta && (
-              <div className="bg-bg2 border border-bg3 p-6 space-y-3">
-                <span className="font-mono text-[11px] text-fg3 uppercase tracking-[2px]">
-                  Creation Info
-                </span>
-                <div className="space-y-2 mt-3">
-                  {aiMeta.model && (
-                    <div className="flex justify-between">
-                      <span className="font-mono text-[12px] text-fg3">Model</span>
-                      <span className="font-mono text-[12px] text-fg">{aiMeta.model}</span>
-                    </div>
-                  )}
-                  {aiMeta.style && (
-                    <div className="flex justify-between">
-                      <span className="font-mono text-[12px] text-fg3">Style</span>
-                      <span className="font-mono text-[12px] text-fg">{aiMeta.style}</span>
-                    </div>
-                  )}
-                  {aiMeta.generated_at && (
-                    <div className="flex justify-between">
-                      <span className="font-mono text-[12px] text-fg3">Created</span>
-                      <span className="font-mono text-[12px] text-fg">
-                        {new Date(aiMeta.generated_at).toLocaleDateString("zh-TW")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Size + Add to cart */}
+            <AddToCartButton
+              productId={product.id}
+              title={product.title}
+              price={product.price}
+              mockupUrl={`/uploads/${product.designImage}`}
+            />
 
-            {/* v2 placeholder */}
-            <div className="border border-bg3 p-6 text-center">
-              <p className="font-mono text-[12px] text-fg3 uppercase tracking-[2px]">
-                即將開放訂購
+            {/* Divider */}
+            <div className="w-full h-px bg-bg3" />
+
+            {/* Info */}
+            <div className="space-y-2">
+              <p className="font-mono text-[11px] text-fg3 tracking-[1px]">
+                台灣製造 / 機能布料 / 獨一無二設計
               </p>
             </div>
           </div>
