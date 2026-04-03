@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -43,6 +43,12 @@ export default function OrderLookupPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [payingOrder, setPayingOrder] = useState<string | null>(null);
+  const payFormRef = useRef<HTMLFormElement>(null);
+  const [paymentData, setPaymentData] = useState<{
+    payGateway: string;
+    formData: Record<string, string>;
+  } | null>(null);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +65,47 @@ export default function OrderLookupPage() {
     setOrders(data.orders || []);
     setSearched(true);
     setLoading(false);
+  }
+
+  async function handleRetryPayment(orderNo: string) {
+    setPayingOrder(orderNo);
+
+    const res = await fetch(`/api/orders/${orderNo}/pay`, { method: "POST" });
+    const data = await res.json();
+
+    if (data.payment) {
+      setPaymentData(data.payment);
+      setTimeout(() => payFormRef.current?.submit(), 100);
+    } else {
+      alert(data.error || "無法取得付款連結");
+      setPayingOrder(null);
+    }
+  }
+
+  // 跳轉到藍新中
+  if (paymentData) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="font-body text-fg text-lg mb-2">正在前往付款頁面...</p>
+            <p className="font-mono text-fg3 text-sm">請稍候，即將跳轉到藍新金流</p>
+          </div>
+          <form
+            ref={payFormRef}
+            method="POST"
+            action={paymentData.payGateway}
+            style={{ display: "none" }}
+          >
+            {Object.entries(paymentData.formData).map(([key, value]) => (
+              <input key={key} type="hidden" name={key} value={value} />
+            ))}
+          </form>
+        </main>
+        <Footer />
+      </>
+    );
   }
 
   return (
@@ -104,9 +151,7 @@ export default function OrderLookupPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                   <div>
-                    <p className="font-mono text-[13px] text-fg">
-                      {order.orderNo}
-                    </p>
+                    <p className="font-mono text-[13px] text-fg">{order.orderNo}</p>
                     <p className="font-mono text-[11px] text-fg3 mt-1">
                       {order.name} &middot; {order.phone}
                     </p>
@@ -135,10 +180,28 @@ export default function OrderLookupPage() {
                   ))}
                 </div>
 
-                {/* Date */}
-                <p className="font-mono text-[10px] text-fg3 mt-3">
-                  {new Date(order.createdAt).toLocaleString("zh-TW")}
-                </p>
+                {/* Footer: date + retry payment */}
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-bg3">
+                  <p className="font-mono text-[10px] text-fg3">
+                    {new Date(order.createdAt).toLocaleString("zh-TW")}
+                  </p>
+
+                  {order.status === "pending" && (
+                    <button
+                      onClick={() => handleRetryPayment(order.orderNo)}
+                      disabled={payingOrder === order.orderNo}
+                      className="px-4 py-2 bg-accent text-white font-mono text-[11px] uppercase tracking-[1px] hover:bg-accent2 disabled:opacity-50 transition-colors"
+                    >
+                      {payingOrder === order.orderNo ? "處理中..." : "前往付款"}
+                    </button>
+                  )}
+
+                  {order.status === "paid" && (
+                    <span className="font-mono text-[11px] text-green-400 tracking-[1px]">
+                      ✓ 已付款
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
