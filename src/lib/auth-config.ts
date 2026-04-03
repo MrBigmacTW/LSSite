@@ -44,7 +44,9 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
+  trustHost: true,
 };
