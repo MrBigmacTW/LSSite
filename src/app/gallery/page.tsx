@@ -1,8 +1,10 @@
-import { prisma } from "@/lib/prisma";
+import { getPublishedProducts } from "@/lib/db";
 import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GalleryPageContent from "./GalleryPageContent";
+
+export const dynamic = "force-dynamic";
 
 interface GalleryPageProps {
   searchParams: Promise<{ style?: string }>;
@@ -11,18 +13,15 @@ interface GalleryPageProps {
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const { style } = await searchParams;
 
-  const products = await prisma.product.findMany({
-    where: { status: "published" },
-    orderBy: { createdAt: "desc" },
-  });
+  const products = await getPublishedProducts();
 
   const items = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    tags: JSON.parse(p.tags) as string[],
-    thumbnailUrl: imageUrl(p.designImage),
-    price: p.price,
-    date: new Date(p.createdAt).toLocaleDateString("zh-TW"),
+    id: p.id as string,
+    title: p.title as string,
+    tags: JSON.parse(p.tags as string) as string[],
+    thumbnailUrl: imageUrl(p.designImage as string),
+    price: p.price as number,
+    date: "",
   }));
 
   return (

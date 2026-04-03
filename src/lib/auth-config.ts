@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { getUserByUsername } from "./db";
 
 export const authConfig: NextAuthConfig = {
   providers: [
@@ -16,7 +16,7 @@ export const authConfig: NextAuthConfig = {
         const password = credentials?.password as string;
         if (!username || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { username } });
+        const user = await getUserByUsername(username);
         if (!user) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);

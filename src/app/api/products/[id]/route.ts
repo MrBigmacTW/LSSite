@@ -1,74 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { authenticateAny, requirePermission } from "@/lib/auth";
+import { getProductById, updateProductStatus, deleteProduct, db } from "@/lib/db";
+import { authenticateAny } from "@/lib/auth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-// GET /api/products/[id]
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id } });
-
-  if (!product) {
-    return NextResponse.json({ error: "商品不存在" }, { status: 404 });
-  }
+  const product = await getProductById(id);
+  if (!product) return NextResponse.json({ error: "商品不存在" }, { status: 404 });
 
   return NextResponse.json({
     ...product,
-    tags: JSON.parse(product.tags),
-    mockups: JSON.parse(product.mockups),
-    aiMetadata: product.aiMetadata ? JSON.parse(product.aiMetadata) : null,
+    tags: JSON.parse(product.tags as string),
+    mockups: JSON.parse(product.mockups as string),
   });
 }
 
-// PATCH /api/products/[id]
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateAny(req);
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
   const body = await req.json();
+  const product = await getProductById(id);
+  if (!product) return NextResponse.json({ error: "商品不存在" }, { status: 404 });
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) {
-    return NextResponse.json({ error: "商品不存在" }, { status: 404 });
+  if (body.status) {
+    await updateProductStatus(id, body.status);
   }
 
-  const updateData: Record<string, unknown> = {};
-  if (body.title !== undefined) updateData.title = body.title;
-  if (body.description !== undefined) updateData.description = body.description;
-  if (body.tags !== undefined) updateData.tags = JSON.stringify(body.tags);
-  if (body.status !== undefined) updateData.status = body.status;
-  if (body.price !== undefined) updateData.price = body.price;
-  if (body.sku !== undefined) updateData.sku = body.sku;
+  // Update other fields
+  const sets: string[] = [];
+  const args: unknown[] = [];
+  if (body.title) { sets.push("title = ?"); args.push(body.title); }
+  if (body.description !== undefined) { sets.push("description = ?"); args.push(body.description); }
+  if (body.tags) { sets.push("tags = ?"); args.push(JSON.stringify(body.tags)); }
+  if (body.price !== undefined) { sets.push("price = ?"); args.push(body.price); }
 
-  const updated = await prisma.product.update({
-    where: { id },
-    data: updateData,
-  });
+  if (sets.length > 0) {
+    sets.push("updatedAt = ?");
+    args.push(new Date().toISOString());
+    args.push(id);
+    await db.execute({ sql: `UPDATE Product SET ${sets.join(", ")} WHERE id = ?`, args: args as (string | number | null)[] });
+  }
 
-  return NextResponse.json({
-    ...updated,
-    tags: JSON.parse(updated.tags),
-    mockups: JSON.parse(updated.mockups),
-    aiMetadata: updated.aiMetadata ? JSON.parse(updated.aiMetadata) : null,
-  });
+  const updated = await getProductById(id);
+  return NextResponse.json(updated);
 }
 
-// DELETE /api/products/[id]
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateAny(req);
   if (!authResult.authenticated) return authResult.response;
 
-  const permError = requirePermission(authResult, "delete");
-  if (permError) return permError;
-
   const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) {
-    return NextResponse.json({ error: "商品不存在" }, { status: 404 });
-  }
-
-  await prisma.product.delete({ where: { id } });
+  await deleteProduct(id);
   return NextResponse.json({ message: "已刪除" });
 }

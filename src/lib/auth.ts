@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "./prisma";
+import { getApiKeyByKey } from "./db";
 
 type AuthResult = {
   authenticated: true;
@@ -39,22 +39,17 @@ export async function authenticateApiKey(req: NextRequest): Promise<AuthResult> 
   }
 
   const key = header.slice(7);
-  const apiKey = await prisma.apiKey.findUnique({ where: { key } });
+  const apiKey = await getApiKeyByKey(key);
 
-  if (!apiKey || !apiKey.active) {
+  if (!apiKey) {
     return { authenticated: false, response: unauthorized("Invalid API key") };
   }
 
-  const permissions = JSON.parse(apiKey.permissions) as string[];
-  return {
-    authenticated: true,
-    source: "apikey",
-    permissions,
-  };
+  const permissions = JSON.parse(apiKey.permissions as string) as string[];
+  return { authenticated: true, source: "apikey", permissions };
 }
 
 export async function authenticateAny(req: NextRequest): Promise<AuthResult> {
-  // Try session first
   const session = await auth();
   if (session?.user) {
     return {
@@ -64,13 +59,11 @@ export async function authenticateAny(req: NextRequest): Promise<AuthResult> {
       role: (session.user as { role?: string }).role,
     };
   }
-
-  // Then try API key
   return authenticateApiKey(req);
 }
 
 export function requirePermission(authResult: AuthResult & { authenticated: true }, permission: string): NextResponse | null {
-  if (authResult.source === "session") return null; // session users have all permissions
+  if (authResult.source === "session") return null;
   if (authResult.permissions?.includes(permission)) return null;
   return forbidden(`Missing permission: ${permission}`);
 }

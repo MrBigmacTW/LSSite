@@ -1,21 +1,15 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getProductCount } from "@/lib/db";
 import AdminSidebar from "@/components/AdminSidebar";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/login");
-  }
+export const dynamic = "force-dynamic";
 
-  const pendingCount = await prisma.product.count({
-    where: { status: "pending_review" },
-  });
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const pendingCount = await getProductCount("pending_review");
 
   return (
     <div className="flex min-h-screen">

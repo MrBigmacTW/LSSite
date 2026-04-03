@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getPublishedProducts } from "@/lib/db";
 import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
@@ -6,20 +6,18 @@ import GallerySection from "@/components/GallerySection";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
-  const products = await prisma.product.findMany({
-    where: { status: "published" },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
+  const products = await getPublishedProducts(8);
 
   const galleryItems = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    tags: JSON.parse(p.tags) as string[],
-    thumbnailUrl: imageUrl(p.designImage),
-    price: p.price,
-    date: new Date(p.createdAt).toLocaleDateString("zh-TW"),
+    id: p.id as string,
+    title: p.title as string,
+    tags: JSON.parse(p.tags as string) as string[],
+    thumbnailUrl: imageUrl(p.designImage as string),
+    price: p.price as number,
+    date: "",
   }));
 
   return (
