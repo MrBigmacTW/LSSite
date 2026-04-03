@@ -20,11 +20,12 @@ export default function AddToCartButton({
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
   function handleAdd() {
     if (!selectedSize) return;
-    addItem({ productId, title, size: selectedSize, price, mockupUrl });
+    addItem({ productId, title, size: selectedSize, price, mockupUrl }, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
@@ -55,6 +56,28 @@ export default function AddToCartButton({
         </div>
       </div>
 
+      {/* Quantity selector */}
+      <div>
+        <span className="block font-mono text-[11px] text-fg3 uppercase tracking-[1px] mb-3">
+          數量
+        </span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className="w-10 h-10 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-lg transition-colors"
+          >
+            -
+          </button>
+          <span className="font-mono text-lg text-fg w-8 text-center">{quantity}</span>
+          <button
+            onClick={() => setQuantity(quantity + 1)}
+            className="w-10 h-10 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-lg transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
       {/* Add to cart */}
       <button
         onClick={handleAdd}
@@ -69,7 +92,11 @@ export default function AddToCartButton({
           }
         `}
       >
-        {added ? "已加入購物車 ✓" : !selectedSize ? "請先選擇尺寸" : "加入購物車"}
+        {added
+          ? `已加入購物車 ✓`
+          : !selectedSize
+            ? "請先選擇尺寸"
+            : `加入購物車 — NT$ ${(price * quantity).toLocaleString()}`}
       </button>
     </div>
   );
