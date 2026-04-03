@@ -31,11 +31,16 @@ const localStore: StorageService = {
 const blobStore: StorageService = {
   async upload(file: Buffer, filePath: string): Promise<string> {
     const { put } = await import("@vercel/blob");
-    const blob = await put(filePath, file, { addRandomSuffix: false });
-    return blob.url; // Returns full URL like https://xxx.public.blob.vercel-storage.com/...
+    // 嘗試 public，如果 store 是 private 則用 private
+    try {
+      const blob = await put(filePath, file, { access: "public", addRandomSuffix: false });
+      return blob.url;
+    } catch {
+      const blob = await put(filePath, file, { access: "private", addRandomSuffix: false });
+      return blob.url;
+    }
   },
   getUrl(filePath: string): string {
-    // If it's already a full URL (from Vercel Blob), return as-is
     if (filePath.startsWith("http")) return filePath;
     return `/uploads/${filePath}`;
   },
