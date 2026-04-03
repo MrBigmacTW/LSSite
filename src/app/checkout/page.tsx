@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,6 +12,11 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const payFormRef = useRef<HTMLFormElement>(null);
+  const [paymentData, setPaymentData] = useState<{
+    payGateway: string;
+    formData: Record<string, string>;
+  } | null>(null);
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -48,10 +53,21 @@ export default function CheckoutPage() {
 
     const data = await res.json();
     clearCart();
-    router.push(`/checkout/success?orderNo=${data.orderNo}`);
+
+    if (data.payment) {
+      // 藍新金流：用隱藏表單自動 POST 到藍新付款頁
+      setPaymentData(data.payment);
+      // 等 state 更新後 form render 出來再 submit
+      setTimeout(() => {
+        payFormRef.current?.submit();
+      }, 100);
+    } else {
+      // 藍新未設定：直接到成功頁
+      router.push(`/checkout/success?orderNo=${data.orderNo}`);
+    }
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !paymentData) {
     return (
       <>
         <Navbar />
@@ -62,6 +78,33 @@ export default function CheckoutPage() {
               去逛逛 →
             </a>
           </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // 藍新跳轉中的畫面
+  if (paymentData) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="font-body text-fg text-lg mb-2">正在前往付款頁面...</p>
+            <p className="font-mono text-fg3 text-sm">請稍候，即將跳轉到藍新金流</p>
+          </div>
+          {/* 隱藏表單，自動 POST 到藍新 */}
+          <form
+            ref={payFormRef}
+            method="POST"
+            action={paymentData.payGateway}
+            style={{ display: "none" }}
+          >
+            {Object.entries(paymentData.formData).map(([key, value]) => (
+              <input key={key} type="hidden" name={key} value={value} />
+            ))}
+          </form>
         </main>
         <Footer />
       </>
@@ -138,11 +181,11 @@ export default function CheckoutPage() {
               disabled={loading}
               className="w-full py-4 bg-accent text-white font-mono text-[12px] uppercase tracking-[2px] hover:bg-accent2 disabled:opacity-50 transition-colors"
             >
-              {loading ? "處理中..." : "確認訂購"}
+              {loading ? "處理中..." : "確認付款"}
             </button>
 
             <p className="font-mono text-[10px] text-fg3 mt-4 text-center">
-              金流服務即將上線，目前以訂單方式處理
+              付款由藍新金流處理，支援信用卡 / WebATM
             </p>
           </div>
         </form>
