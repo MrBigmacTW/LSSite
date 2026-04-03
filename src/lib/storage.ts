@@ -31,7 +31,7 @@ const localStore: StorageService = {
 const blobStore: StorageService = {
   async upload(file: Buffer, filePath: string): Promise<string> {
     const { put } = await import("@vercel/blob");
-    const blob = await put(filePath, file, { access: "public" });
+    const blob = await put(filePath, file, { addRandomSuffix: false });
     return blob.url; // Returns full URL like https://xxx.public.blob.vercel-storage.com/...
   },
   getUrl(filePath: string): string {
