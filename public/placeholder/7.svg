@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A0A"/>
+      <stop offset="40%" stop-color="#001a10"/>
+      <stop offset="100%" stop-color="#000d08"/>
+    </linearGradient>
+    <radialGradient id="greenGlow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#00cc66" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#00cc66" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="tealGlow" cx="50%" cy="70%" r="60%">
+      <stop offset="0%" stop-color="#00b3a4" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#00b3a4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="leafBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="softGlow7">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg7)"/>
+  <rect width="600" height="800" fill="url(#greenGlow)"/>
+  <rect width="600" height="800" fill="url(#tealGlow)"/>
+
+  <!-- Radial organic light source -->
+  <ellipse cx="300" cy="350" rx="220" ry="180" fill="#00cc66" opacity="0.04" filter="url(#softGlow7)"/>
+
+  <!-- Layered leaf/frond shapes — back layer -->
+  <g opacity="0.18" fill="#004d30">
+    <!-- Large frond left -->
+    <path d="M-20,400 C50,300 120,200 180,240 C140,280 100,340 80,420 C60,490 30,530 -20,540 Z"/>
+    <!-- Large frond right -->
+    <path d="M620,380 C550,280 480,190 420,230 C460,270 500,330 520,410 C540,480 570,520 620,530 Z"/>
+    <!-- Top frond -->
+    <path d="M300,0 C250,60 200,130 230,180 C260,150 300,100 340,80 C380,60 420,50 440,20 C400,10 350,0 300,0 Z"/>
+  </g>
+
+  <!-- Mid-layer tropical leaves -->
+  <g opacity="0.35">
+    <!-- Left large monstera leaf -->
+    <path d="M-30,520 C40,440 100,380 150,360 C130,400 110,450 100,510 C90,560 80,610 60,650"
+          fill="none" stroke="#006633" stroke-width="12" stroke-linecap="round"/>
+    <path d="M150,360 C180,340 200,300 210,260"
+          fill="none" stroke="#006633" stroke-width="8" stroke-linecap="round"/>
+    <!-- Leaf blade left -->
+    <path d="M0,600 C50,520 100,460 150,360 C110,380 70,420 40,480 C20,520 10,560 0,600 Z"
+          fill="#004d22"/>
+    <!-- Leaf cuts (monstera holes) -->
+    <path d="M60,500 C75,480 90,470 105,475" fill="none" stroke="#001a0c" stroke-width="8"/>
+    <path d="M40,540 C58,518 75,508 90,514" fill="none" stroke="#001a0c" stroke-width="6"/>
+
+    <!-- Right large palm frond -->
+    <path d="M630,480 C560,400 490,340 440,320 C460,360 490,410 500,470 C510,520 520,580 540,620"
+          fill="none" stroke="#006633" stroke-width="12" stroke-linecap="round"/>
+    <path d="M440,320 C420,290 380,260 360,230"
+          fill="none" stroke="#006633" stroke-width="8" stroke-linecap="round"/>
+    <!-- Leaf blade right -->
+    <path d="M600,590 C550,510 500,450 440,320 C480,340 520,380 560,440 C580,480 595,535 600,590 Z"
+          fill="#004d22"/>
+    <path d="M540,490 C525,470 510,460 495,466" fill="none" stroke="#001a0c" stroke-width="7"/>
+  </g>
+
+  <!-- Foreground ferns / tall grass blades -->
+  <g stroke="#00883a" stroke-linecap="round" opacity="0.5">
+    <path d="M80,800 C75,720 60,660 40,600" fill="none" stroke-width="2"/>
+    <path d="M80,800 C95,730 105,670 90,610" fill="none" stroke-width="1.5"/>
+    <path d="M100,800 C88,740 70,680 55,630" fill="none" stroke-width="1.5"/>
+    <path d="M520,800 C525,720 540,660 560,600" fill="none" stroke-width="2"/>
+    <path d="M510,800 C495,730 485,670 500,610" fill="none" stroke-width="1.5"/>
+    <path d="M530,800 C545,740 565,685 575,635" fill="none" stroke-width="1.5"/>
+    <!-- Center bottom grass -->
+    <path d="M270,800 C265,750 250,700 240,650" fill="none" stroke-width="1.5" opacity="0.4"/>
+    <path d="M300,800 C300,755 295,710 300,665" fill="none" stroke-width="1.5" opacity="0.4"/>
+    <path d="M330,800 C335,750 350,700 360,650" fill="none" stroke-width="1.5" opacity="0.4"/>
+  </g>
+
+  <!-- Central botanical motif — circular mandala with organic shapes -->
+  <!-- Outer ring -->
+  <circle cx="300" cy="360" r="130" fill="none" stroke="#00cc66" stroke-width="0.8" opacity="0.3"/>
+  <circle cx="300" cy="360" r="130" fill="none" stroke="#00cc66" stroke-width="6" opacity="0.05" filter="url(#softGlow7)"/>
+
+  <!-- Petal/leaf shapes arranged in circle -->
+  <g transform="translate(300,360)">
+    <g opacity="0.5">
+      <!-- 8 leaf petals -->
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(0)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(45)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(90)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(135)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(180)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(225)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(270)"/>
+      <ellipse cx="0" cy="-90" rx="18" ry="40" fill="#004d22" stroke="#00aa44" stroke-width="0.8" transform="rotate(315)"/>
+    </g>
+
+    <!-- Inner ring -->
+    <circle cx="0" cy="0" r="55" fill="none" stroke="#00b3a4" stroke-width="0.7" opacity="0.4"/>
+    <!-- Inner petals -->
+    <g opacity="0.4">
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(0)"/>
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(60)"/>
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(120)"/>
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(180)"/>
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(240)"/>
+      <ellipse cx="0" cy="-40" rx="12" ry="24" fill="#003322" stroke="#00b3a4" stroke-width="0.6" transform="rotate(300)"/>
+    </g>
+
+    <!-- Center core -->
+    <circle cx="0" cy="0" r="18" fill="#001a0f" stroke="#00cc66" stroke-width="1" opacity="0.7"/>
+    <circle cx="0" cy="0" r="10" fill="#00cc66" opacity="0.12"/>
+    <circle cx="0" cy="0" r="5" fill="#00cc66" opacity="0.2"/>
+  </g>
+
+  <!-- Teal water / reflective element at bottom -->
+  <defs>
+    <linearGradient id="water7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00b3a4" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#00b3a4" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="300" cy="680" rx="200" ry="30" fill="url(#water7)"/>
+  <ellipse cx="300" cy="700" rx="180" ry="20" fill="url(#water7)" opacity="0.6"/>
+  <ellipse cx="300" cy="718" rx="150" ry="14" fill="url(#water7)" opacity="0.4"/>
+
+  <!-- Ripple lines -->
+  <g stroke="#00b3a4" stroke-width="0.5" fill="none" opacity="0.2">
+    <ellipse cx="300" cy="680" rx="180" ry="18"/>
+    <ellipse cx="300" cy="695" rx="150" ry="14"/>
+    <ellipse cx="300" cy="710" rx="120" ry="10"/>
+  </g>
+
+  <!-- Firefly dots -->
+  <g fill="#00ff88" opacity="0.5">
+    <circle cx="155" cy="250" r="1.5"/>
+    <circle cx="170" cy="290" r="1"/>
+    <circle cx="435" cy="265" r="1.5"/>
+    <circle cx="450" cy="300" r="1"/>
+    <circle cx="220" cy="480" r="1.2"/>
+    <circle cx="385" cy="470" r="1.2"/>
+    <circle cx="260" cy="550" r="1"/>
+    <circle cx="340" cy="545" r="1.3"/>
+    <circle cx="130" cy="600" r="1"/>
+    <circle cx="470" cy="590" r="1"/>
+  </g>
+
+  <!-- Label -->
+  <text x="300" y="758" text-anchor="middle" font-family="monospace" font-size="10" fill="#00cc66" opacity="0.35" letter-spacing="4">GREEN · TEAL · TROPICAL</text>
+</svg>

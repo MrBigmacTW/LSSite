@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f0500"/>
+      <stop offset="100%" stop-color="#111111"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="50%" cy="35%" r="40%">
+      <stop offset="0%" stop-color="#ffd700" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="tinyBlur">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+    <clipPath id="frame">
+      <rect x="40" y="40" width="520" height="720" rx="2"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg2)"/>
+
+  <!-- Inner frame -->
+  <rect x="40" y="40" width="520" height="720" fill="none" stroke="#b8860b" stroke-width="1" opacity="0.6"/>
+  <rect x="50" y="50" width="500" height="700" fill="none" stroke="#8b6914" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Clipped artwork area -->
+  <g clip-path="url(#frame)">
+
+    <!-- Sky gradient -->
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1a0505"/>
+        <stop offset="50%" stop-color="#3d0a00"/>
+        <stop offset="100%" stop-color="#1a0a00"/>
+      </linearGradient>
+    </defs>
+    <rect x="40" y="40" width="520" height="720" fill="url(#sky)"/>
+
+    <!-- Sun glow -->
+    <ellipse cx="300" cy="310" rx="200" ry="150" fill="url(#sunGlow)" filter="url(#softBlur)"/>
+
+    <!-- Sun disk -->
+    <circle cx="300" cy="300" r="55" fill="none" stroke="#ffd700" stroke-width="1.5" opacity="0.7"/>
+    <circle cx="300" cy="300" r="45" fill="#c8860a" opacity="0.4"/>
+    <circle cx="300" cy="300" r="30" fill="#ffd700" opacity="0.15" filter="url(#tinyBlur)"/>
+
+    <!-- Sun horizontal line bands (ukiyo-e style) -->
+    <g stroke="#ffd700" stroke-width="0.8" opacity="0.5">
+      <line x1="245" y1="270" x2="355" y2="270"/>
+      <line x1="240" y1="278" x2="360" y2="278"/>
+      <line x1="238" y1="286" x2="362" y2="286"/>
+      <line x1="237" y1="294" x2="363" y2="294"/>
+      <line x1="237" y1="302" x2="363" y2="302"/>
+      <line x1="238" y1="310" x2="362" y2="310"/>
+      <line x1="240" y1="318" x2="360" y2="318"/>
+      <line x1="245" y1="326" x2="355" y2="326"/>
+    </g>
+
+    <!-- Wave layers — ukiyo-e style curves -->
+    <!-- Wave layer 1 (back, dark) -->
+    <path d="M40,420 C100,390 150,370 200,395 C250,420 300,440 350,415 C400,390 450,370 510,395 L560,420 L560,520 L40,520 Z"
+          fill="#1a0a00" opacity="0.9"/>
+    <path d="M40,420 C100,400 160,385 220,405 C270,422 310,440 360,418 C410,396 460,378 560,405"
+          fill="none" stroke="#cc3300" stroke-width="2" opacity="0.7"/>
+
+    <!-- Wave layer 2 (mid red wave) -->
+    <path d="M40,470 C80,445 130,435 190,455 C240,472 300,490 360,465 C410,443 470,430 560,455 L560,600 L40,600 Z"
+          fill="#2a0800"/>
+    <path d="M40,470 C90,450 140,440 200,460 C250,477 305,492 360,468 C415,445 475,433 560,458"
+          fill="none" stroke="#cc3300" stroke-width="2.5" opacity="0.8"/>
+
+    <!-- Wave crest details (white tips) -->
+    <path d="M80,445 C90,438 100,435 110,440" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.5"/>
+    <path d="M230,455 C245,447 258,445 270,450" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.5"/>
+    <path d="M380,462 C395,454 408,452 420,457" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.5"/>
+
+    <!-- Wave layer 3 (front, deepest) -->
+    <path d="M40,540 C100,515 170,505 240,525 C290,540 340,558 410,535 C460,518 510,508 560,525 L560,760 L40,760 Z"
+          fill="#1f0600"/>
+    <path d="M40,540 C105,520 175,510 245,530 C295,545 345,562 415,540 C465,523 515,513 560,528"
+          fill="none" stroke="#ff4400" stroke-width="2" opacity="0.6"/>
+
+    <!-- Mount Fuji silhouette -->
+    <path d="M220,310 L300,160 L380,310 Z" fill="#0f0300" opacity="0.95"/>
+    <!-- Snow cap -->
+    <path d="M278,195 L300,160 L322,195 C315,188 305,184 300,183 C295,184 285,188 278,195 Z"
+          fill="#ffd700" opacity="0.15"/>
+    <path d="M270,210 L300,160 L330,210 C318,200 308,195 300,194 C292,195 282,200 270,210 Z"
+          fill="white" opacity="0.08"/>
+
+    <!-- Distant flying cranes (abstract) -->
+    <g stroke="#b8860b" stroke-width="1" fill="none" opacity="0.6">
+      <!-- Crane 1 -->
+      <path d="M110,200 C120,195 130,190 140,195"/>
+      <path d="M125,193 L125,205"/>
+      <!-- Crane 2 -->
+      <path d="M155,185 C165,180 175,176 185,180"/>
+      <path d="M170,178 L170,190"/>
+      <!-- Crane 3 -->
+      <path d="M200,175 C208,171 216,168 224,171"/>
+      <path d="M212,169 L212,180"/>
+      <!-- Crane 4 small -->
+      <path d="M420,195 C428,191 436,188 444,191"/>
+      <path d="M432,189 L432,200"/>
+      <path d="M455,185 C461,182 467,179 473,182"/>
+      <path d="M464,180 L464,190"/>
+    </g>
+
+    <!-- Sakura blossom hints (abstract circles + petals) -->
+    <g opacity="0.35">
+      <circle cx="130" cy="280" r="3" fill="#cc3300"/>
+      <circle cx="142" cy="275" r="2" fill="#cc3300"/>
+      <circle cx="137" cy="288" r="2.5" fill="#aa2200"/>
+      <circle cx="460" cy="270" r="3" fill="#cc3300"/>
+      <circle cx="472" cy="265" r="2" fill="#cc3300"/>
+      <circle cx="467" cy="278" r="2.5" fill="#aa2200"/>
+    </g>
+
+    <!-- Decorative border pattern (karakusa-style simplified) -->
+    <g stroke="#8b6914" stroke-width="0.8" fill="none" opacity="0.5">
+      <rect x="55" y="55" width="490" height="690"/>
+      <!-- Corner accents -->
+      <path d="M55,55 Q75,55 75,75"/>
+      <path d="M545,55 Q525,55 525,75"/>
+      <path d="M55,745 Q75,745 75,725"/>
+      <path d="M545,745 Q525,745 525,725"/>
+    </g>
+
+    <!-- Gold text area at bottom -->
+    <rect x="100" y="690" width="400" height="40" fill="#0f0500" opacity="0.7"/>
+    <text x="300" y="715" text-anchor="middle" font-family="serif" font-size="11" fill="#ffd700" opacity="0.6" letter-spacing="6">RED · GOLD · UKIYO-E</text>
+
+  </g>
+
+  <!-- Outer frame lines -->
+  <rect x="40" y="40" width="520" height="720" fill="none" stroke="#b8860b" stroke-width="1" opacity="0.5"/>
+</svg>

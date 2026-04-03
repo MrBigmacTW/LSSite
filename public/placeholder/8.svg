@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg8" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#07000f"/>
+      <stop offset="50%" stop-color="#0e0020"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <radialGradient id="purpleCore" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#6600ff" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#3300aa" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#3300aa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="indigoEdge" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#4b0082" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#4b0082" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#4b0082" stop-opacity="0.4"/>
+    </radialGradient>
+    <filter id="waveBlur">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="softGlow8">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="medGlow">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg8)"/>
+  <rect width="600" height="800" fill="url(#purpleCore)"/>
+  <rect width="600" height="800" fill="url(#indigoEdge)"/>
+
+  <!-- Deep background pulse rings -->
+  <circle cx="300" cy="400" r="320" fill="none" stroke="#3300aa" stroke-width="60" opacity="0.05" filter="url(#softGlow8)"/>
+  <circle cx="300" cy="400" r="200" fill="none" stroke="#6600ff" stroke-width="40" opacity="0.06" filter="url(#softGlow8)"/>
+  <circle cx="300" cy="400" r="100" fill="none" stroke="#9933ff" stroke-width="30" opacity="0.07" filter="url(#softGlow8)"/>
+
+  <!-- Wave band 1 — large sweeping curve, back -->
+  <path d="M-50,650 C50,590 100,520 180,500 C260,480 290,530 370,510 C450,490 510,420 650,400"
+        fill="none" stroke="#3300aa" stroke-width="40" stroke-linecap="round" opacity="0.15"/>
+  <path d="M-50,650 C50,590 100,520 180,500 C260,480 290,530 370,510 C450,490 510,420 650,400"
+        fill="none" stroke="#4b0082" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Wave band 2 -->
+  <path d="M-50,580 C60,530 120,470 200,455 C280,440 320,488 400,468 C470,450 530,390 650,370"
+        fill="none" stroke="#4b0082" stroke-width="35" stroke-linecap="round" opacity="0.18"/>
+  <path d="M-50,580 C60,530 120,470 200,455 C280,440 320,488 400,468 C470,450 530,390 650,370"
+        fill="none" stroke="#6600ff" stroke-width="1" opacity="0.45"/>
+
+  <!-- Wave band 3 (mid) -->
+  <path d="M-50,500 C80,455 140,400 230,390 C310,380 340,425 420,405 C500,385 550,330 650,310"
+        fill="none" stroke="#5500cc" stroke-width="30" stroke-linecap="round" opacity="0.2"/>
+  <path d="M-50,500 C80,455 140,400 230,390 C310,380 340,425 420,405 C500,385 550,330 650,310"
+        fill="none" stroke="#9933ff" stroke-width="1.2" opacity="0.5"/>
+
+  <!-- Wave band 4 -->
+  <path d="M-50,420 C90,385 160,335 250,325 C330,315 365,358 445,338 C520,320 565,270 650,252"
+        fill="none" stroke="#6600ff" stroke-width="25" stroke-linecap="round" opacity="0.22"/>
+  <path d="M-50,420 C90,385 160,335 250,325 C330,315 365,358 445,338 C520,320 565,270 650,252"
+        fill="none" stroke="#bb66ff" stroke-width="1" opacity="0.55"/>
+
+  <!-- Wave band 5 (bright/front) -->
+  <path d="M-50,340 C100,315 170,270 265,260 C345,252 380,292 460,272 C535,253 575,210 650,195"
+        fill="none" stroke="#7722ee" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+  <path d="M-50,340 C100,315 170,270 265,260 C345,252 380,292 460,272 C535,253 575,210 650,195"
+        fill="none" stroke="#cc88ff" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Wave band 6 (topmost thin bright) -->
+  <path d="M-50,260 C110,242 185,205 280,196 C358,188 392,228 470,210 C545,193 580,155 650,142"
+        fill="none" stroke="#9944ff" stroke-width="10" stroke-linecap="round" opacity="0.3"/>
+  <path d="M-50,260 C110,242 185,205 280,196 C358,188 392,228 470,210 C545,193 580,155 650,142"
+        fill="none" stroke="#dd99ff" stroke-width="1.5" opacity="0.65"/>
+  <!-- Glowing edge of top wave -->
+  <path d="M-50,260 C110,242 185,205 280,196 C358,188 392,228 470,210 C545,193 580,155 650,142"
+        fill="none" stroke="#dd99ff" stroke-width="6" opacity="0.12" filter="url(#medGlow)"/>
+
+  <!-- Indigo spiral rings (abstract) -->
+  <g transform="translate(300,400)" fill="none">
+    <ellipse cx="0" cy="0" rx="240" ry="80" stroke="#4b0082" stroke-width="0.7" opacity="0.3" transform="rotate(-15)"/>
+    <ellipse cx="0" cy="0" rx="200" ry="66" stroke="#5500cc" stroke-width="0.6" opacity="0.3" transform="rotate(-10)"/>
+    <ellipse cx="0" cy="0" rx="160" ry="52" stroke="#6600ff" stroke-width="0.6" opacity="0.35" transform="rotate(-5)"/>
+    <ellipse cx="0" cy="0" rx="120" ry="38" stroke="#7722ee" stroke-width="0.7" opacity="0.4" transform="rotate(0)"/>
+    <ellipse cx="0" cy="0" rx="80" ry="25" stroke="#9933ff" stroke-width="0.7" opacity="0.45" transform="rotate(5)"/>
+    <ellipse cx="0" cy="0" rx="40" ry="13" stroke="#bb55ff" stroke-width="0.8" opacity="0.5" transform="rotate(10)"/>
+  </g>
+
+  <!-- Particle field — scattered dots -->
+  <g fill="#9933ff">
+    <circle cx="60" cy="100" r="1.5" opacity="0.6"/>
+    <circle cx="130" cy="60" r="1" opacity="0.5"/>
+    <circle cx="210" cy="90" r="1.8" opacity="0.4"/>
+    <circle cx="290" cy="45" r="1.2" opacity="0.5"/>
+    <circle cx="370" cy="75" r="1" opacity="0.6"/>
+    <circle cx="450" cy="50" r="1.5" opacity="0.5"/>
+    <circle cx="530" cy="85" r="1.2" opacity="0.4"/>
+    <circle cx="40" cy="200" r="1" opacity="0.4"/>
+    <circle cx="560" cy="180" r="1.5" opacity="0.5"/>
+    <circle cx="80" cy="680" r="1.2" opacity="0.5"/>
+    <circle cx="160" cy="720" r="1" opacity="0.4"/>
+    <circle cx="440" cy="700" r="1.5" opacity="0.5"/>
+    <circle cx="520" cy="660" r="1" opacity="0.4"/>
+  </g>
+  <g fill="#cc88ff">
+    <circle cx="90" cy="140" r="1" opacity="0.5"/>
+    <circle cx="175" cy="110" r="1.5" opacity="0.4"/>
+    <circle cx="350" cy="55" r="1" opacity="0.6"/>
+    <circle cx="490" cy="100" r="1.2" opacity="0.4"/>
+    <circle cx="570" cy="135" r="1" opacity="0.5"/>
+    <circle cx="50" cy="640" r="1.3" opacity="0.5"/>
+    <circle cx="545" cy="620" r="1" opacity="0.4"/>
+    <circle cx="300" cy="730" r="1.5" opacity="0.4"/>
+  </g>
+
+  <!-- Center focal point — radiant orb -->
+  <circle cx="300" cy="400" r="30" fill="#6600ff" opacity="0.08" filter="url(#softGlow8)"/>
+  <circle cx="300" cy="400" r="15" fill="#9933ff" opacity="0.1" filter="url(#medGlow)"/>
+  <circle cx="300" cy="400" r="6" fill="#cc88ff" opacity="0.3"/>
+  <circle cx="300" cy="400" r="2" fill="#ffffff" opacity="0.4"/>
+
+  <!-- Radiating spokes from center -->
+  <g stroke="#6600ff" stroke-width="0.5" opacity="0.15">
+    <line x1="300" y1="400" x2="300" y2="80"/>
+    <line x1="300" y1="400" x2="300" y2="720"/>
+    <line x1="300" y1="400" x2="0" y2="400"/>
+    <line x1="300" y1="400" x2="600" y2="400"/>
+    <line x1="300" y1="400" x2="74" y2="174"/>
+    <line x1="300" y1="400" x2="526" y2="626"/>
+    <line x1="300" y1="400" x2="526" y2="174"/>
+    <line x1="300" y1="400" x2="74" y2="626"/>
+  </g>
+
+  <!-- Bottom dark fade -->
+  <defs>
+    <linearGradient id="bottomFade8" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A0A" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0A0A0A" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="600" width="600" height="200" fill="url(#bottomFade8)"/>
+
+  <!-- Label -->
+  <text x="300" y="758" text-anchor="middle" font-family="monospace" font-size="10" fill="#9933ff" opacity="0.4" letter-spacing="4">PURPLE · INDIGO · ABSTRACT</text>
+</svg>

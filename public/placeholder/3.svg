@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A0A"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </linearGradient>
+    <radialGradient id="pinkGlow" cx="30%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#ff007f" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ff007f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blueGlow" cx="70%" cy="60%" r="50%">
+      <stop offset="0%" stop-color="#003fff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#003fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="neonBlur">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="hardBlur">
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg3)"/>
+
+  <!-- Ambient glow blobs -->
+  <ellipse cx="180" cy="320" rx="250" ry="200" fill="url(#pinkGlow)" filter="url(#neonBlur)"/>
+  <ellipse cx="420" cy="480" rx="250" ry="200" fill="url(#blueGlow)" filter="url(#neonBlur)"/>
+
+  <!-- Grid perspective lines (street/vanishing point) -->
+  <g stroke="#1a0030" stroke-width="0.6" opacity="0.8">
+    <!-- Vertical grid -->
+    <line x1="0" y1="500" x2="600" y2="500"/>
+    <line x1="300" y1="500" x2="0" y2="800"/>
+    <line x1="300" y1="500" x2="60" y2="800"/>
+    <line x1="300" y1="500" x2="150" y2="800"/>
+    <line x1="300" y1="500" x2="240" y2="800"/>
+    <line x1="300" y1="500" x2="360" y2="800"/>
+    <line x1="300" y1="500" x2="450" y2="800"/>
+    <line x1="300" y1="500" x2="540" y2="800"/>
+    <line x1="300" y1="500" x2="600" y2="800"/>
+    <!-- Horizontal receding -->
+    <line x1="0" y1="560" x2="600" y2="560"/>
+    <line x1="0" y1="620" x2="600" y2="620"/>
+    <line x1="0" y1="680" x2="600" y2="680"/>
+    <line x1="0" y1="740" x2="600" y2="740"/>
+  </g>
+
+  <!-- Neon floor grid (brighter) -->
+  <g stroke="#ff007f" stroke-width="0.4" opacity="0.25">
+    <line x1="300" y1="500" x2="0" y2="800"/>
+    <line x1="300" y1="500" x2="60" y2="800"/>
+    <line x1="300" y1="500" x2="150" y2="800"/>
+    <line x1="300" y1="500" x2="240" y2="800"/>
+    <line x1="300" y1="500" x2="360" y2="800"/>
+    <line x1="300" y1="500" x2="450" y2="800"/>
+    <line x1="300" y1="500" x2="540" y2="800"/>
+    <line x1="300" y1="500" x2="600" y2="800"/>
+    <line x1="0" y1="560" x2="600" y2="560"/>
+    <line x1="0" y1="620" x2="600" y2="620"/>
+    <line x1="0" y1="680" x2="600" y2="680"/>
+    <line x1="0" y1="740" x2="600" y2="740"/>
+  </g>
+
+  <!-- Building silhouettes left -->
+  <rect x="0" y="200" width="80" height="300" fill="#080810"/>
+  <rect x="10" y="160" width="50" height="340" fill="#080812"/>
+  <rect x="25" y="140" width="30" height="360" fill="#06060e"/>
+  <!-- Windows left buildings -->
+  <g fill="#ff007f" opacity="0.7">
+    <rect x="15" y="170" width="8" height="5"/>
+    <rect x="28" y="170" width="8" height="5"/>
+    <rect x="15" y="185" width="8" height="5"/>
+    <rect x="15" y="200" width="8" height="5"/>
+    <rect x="28" y="200" width="8" height="5"/>
+    <rect x="28" y="215" width="8" height="5"/>
+  </g>
+  <g fill="#003fff" opacity="0.7">
+    <rect x="15" y="215" width="8" height="5"/>
+    <rect x="28" y="185" width="8" height="5"/>
+    <rect x="15" y="230" width="8" height="5"/>
+    <rect x="28" y="230" width="8" height="5"/>
+  </g>
+
+  <!-- Building silhouettes right -->
+  <rect x="520" y="180" width="80" height="320" fill="#080810"/>
+  <rect x="540" y="150" width="50" height="350" fill="#080812"/>
+  <rect x="545" y="130" width="35" height="370" fill="#06060e"/>
+  <!-- Windows right buildings -->
+  <g fill="#003fff" opacity="0.7">
+    <rect x="548" y="145" width="8" height="5"/>
+    <rect x="562" y="145" width="8" height="5"/>
+    <rect x="548" y="160" width="8" height="5"/>
+    <rect x="548" y="175" width="8" height="5"/>
+    <rect x="562" y="175" width="8" height="5"/>
+  </g>
+  <g fill="#ff007f" opacity="0.7">
+    <rect x="562" y="160" width="8" height="5"/>
+    <rect x="548" y="190" width="8" height="5"/>
+    <rect x="562" y="190" width="8" height="5"/>
+    <rect x="562" y="205" width="8" height="5"/>
+  </g>
+
+  <!-- Center neon sign frame (main element) -->
+  <rect x="140" y="120" width="320" height="280" rx="4" fill="#050508" stroke="#ff007f" stroke-width="2" opacity="0.9" filter="url(#hardBlur)"/>
+  <rect x="140" y="120" width="320" height="280" rx="4" fill="none" stroke="#ff007f" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Neon pink outer glow of frame -->
+  <rect x="140" y="120" width="320" height="280" rx="4" fill="none" stroke="#ff007f" stroke-width="6" opacity="0.12" filter="url(#neonBlur)"/>
+
+  <!-- Inner decorative border -->
+  <rect x="155" y="135" width="290" height="250" rx="2" fill="none" stroke="#003fff" stroke-width="1" opacity="0.5"/>
+
+  <!-- Abstract neon geometric shapes inside frame -->
+  <!-- Triangle pink -->
+  <polygon points="300,160 215,280 385,280" fill="none" stroke="#ff007f" stroke-width="1.5" opacity="0.8"/>
+  <polygon points="300,160 215,280 385,280" fill="none" stroke="#ff007f" stroke-width="5" opacity="0.1" filter="url(#neonBlur)"/>
+
+  <!-- Triangle blue (inverted, offset) -->
+  <polygon points="300,290 210,175 390,175" fill="none" stroke="#003fff" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="300,290 210,175 390,175" fill="none" stroke="#003fff" stroke-width="5" opacity="0.1" filter="url(#neonBlur)"/>
+
+  <!-- Center circle -->
+  <circle cx="300" cy="232" r="35" fill="none" stroke="#ff007f" stroke-width="1.5" opacity="0.9"/>
+  <circle cx="300" cy="232" r="35" fill="none" stroke="#ff007f" stroke-width="8" opacity="0.1" filter="url(#neonBlur)"/>
+  <circle cx="300" cy="232" r="22" fill="none" stroke="#003fff" stroke-width="1" opacity="0.7"/>
+  <circle cx="300" cy="232" r="8" fill="#ff007f" opacity="0.4"/>
+
+  <!-- Neon sign text lines (abstract bars to suggest text) -->
+  <rect x="200" y="310" width="200" height="4" rx="2" fill="#ff007f" opacity="0.8"/>
+  <rect x="200" y="310" width="200" height="4" rx="2" fill="#ff007f" opacity="0.3" filter="url(#neonBlur)"/>
+  <rect x="220" y="322" width="160" height="3" rx="1.5" fill="#003fff" opacity="0.7"/>
+  <rect x="220" y="322" width="160" height="3" rx="1.5" fill="#003fff" opacity="0.25" filter="url(#neonBlur)"/>
+  <rect x="240" y="333" width="120" height="2" rx="1" fill="#ff007f" opacity="0.5"/>
+
+  <!-- Vertical neon strips on sides -->
+  <rect x="100" y="100" width="3" height="400" rx="1.5" fill="#ff007f" opacity="0.4"/>
+  <rect x="100" y="100" width="3" height="400" rx="1.5" fill="#ff007f" opacity="0.15" filter="url(#neonBlur)"/>
+  <rect x="497" y="100" width="3" height="400" rx="1.5" fill="#003fff" opacity="0.4"/>
+  <rect x="497" y="100" width="3" height="400" rx="1.5" fill="#003fff" opacity="0.15" filter="url(#neonBlur)"/>
+
+  <!-- Scattered pixel/rain dots -->
+  <g fill="#ff007f" opacity="0.6">
+    <rect x="75" y="80" width="2" height="8"/>
+    <rect x="180" y="60" width="2" height="12"/>
+    <rect x="350" y="70" width="2" height="6"/>
+    <rect x="430" y="50" width="2" height="10"/>
+    <rect x="510" y="75" width="2" height="14"/>
+    <rect x="130" y="420" width="2" height="8"/>
+    <rect x="460" y="440" width="2" height="10"/>
+  </g>
+  <g fill="#003fff" opacity="0.6">
+    <rect x="200" y="55" width="2" height="10"/>
+    <rect x="290" y="45" width="2" height="14"/>
+    <rect x="400" y="65" width="2" height="8"/>
+    <rect x="550" y="55" width="2" height="12"/>
+    <rect x="60" y="430" width="2" height="9"/>
+    <rect x="530" y="420" width="2" height="11"/>
+  </g>
+
+  <!-- Bottom label -->
+  <text x="300" y="760" text-anchor="middle" font-family="monospace" font-size="10" fill="#ff007f" opacity="0.5" letter-spacing="4">NEON PINK · ELECTRIC BLUE</text>
+</svg>

@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg6" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg6)"/>
+
+  <!-- Large letterform shapes — abstract typographic art -->
+
+  <!-- Giant "A" skeleton (back layer, very large, clipped) -->
+  <g opacity="0.06" fill="white">
+    <polygon points="300,20 460,580 400,580 300,240 200,580 140,580"/>
+    <polygon points="180,420 420,420 420,470 180,470"/>
+  </g>
+
+  <!-- Oversized abstract letterform strokes -->
+  <!-- Thick stem — like an "I" beam -->
+  <rect x="275" y="60" width="50" height="680" fill="none" stroke="white" stroke-width="1" opacity="0.07"/>
+  <rect x="288" y="60" width="24" height="680" fill="white" opacity="0.04"/>
+
+  <!-- Serif caps top & bottom -->
+  <rect x="220" y="60" width="160" height="18" fill="white" opacity="0.12"/>
+  <rect x="220" y="722" width="160" height="18" fill="white" opacity="0.12"/>
+
+  <!-- Large "O" circle outline -->
+  <circle cx="300" cy="400" r="190" fill="none" stroke="white" stroke-width="28" opacity="0.07"/>
+  <circle cx="300" cy="400" r="190" fill="none" stroke="white" stroke-width="1" opacity="0.2"/>
+
+  <!-- Abstract letterform collage — various sizes/weights -->
+
+  <!-- Massive "S" curve (two arcs) -->
+  <path d="M360,150 C420,150 440,200 400,240 C360,280 280,290 260,340 C240,390 270,440 340,440"
+        fill="none" stroke="white" stroke-width="22" stroke-linecap="round" opacity="0.06"/>
+  <path d="M360,150 C420,150 440,200 400,240 C360,280 280,290 260,340 C240,390 270,440 340,440"
+        fill="none" stroke="white" stroke-width="1" stroke-linecap="round" opacity="0.3"/>
+
+  <!-- Horizontal "E" bars (right side) -->
+  <rect x="370" y="260" width="130" height="16" fill="white" opacity="0.1"/>
+  <rect x="370" y="300" width="100" height="10" fill="white" opacity="0.08"/>
+  <rect x="370" y="332" width="130" height="16" fill="white" opacity="0.1"/>
+  <rect x="370" y="260" width="12" height="88" fill="white" opacity="0.1"/>
+
+  <!-- "T" letterform (left) -->
+  <rect x="60" y="350" width="120" height="14" fill="white" opacity="0.1"/>
+  <rect x="113" y="364" width="14" height="110" fill="white" opacity="0.1"/>
+
+  <!-- Dot (period) — large scale -->
+  <rect x="270" y="590" width="60" height="60" rx="4" fill="white" opacity="0.1"/>
+  <rect x="278" y="598" width="44" height="44" rx="2" fill="white" opacity="0.07"/>
+
+  <!-- Fine detail — baseline grid (like ruled paper) -->
+  <g stroke="#333" stroke-width="0.4" opacity="0.6">
+    <line x1="60" y1="200" x2="540" y2="200"/>
+    <line x1="60" y1="280" x2="540" y2="280"/>
+    <line x1="60" y1="360" x2="540" y2="360"/>
+    <line x1="60" y1="440" x2="540" y2="440"/>
+    <line x1="60" y1="520" x2="540" y2="520"/>
+    <line x1="60" y1="600" x2="540" y2="600"/>
+    <line x1="60" y1="680" x2="540" y2="680"/>
+  </g>
+  <!-- Cap-height line (slightly brighter) -->
+  <g stroke="#444" stroke-width="0.5" opacity="0.5">
+    <line x1="60" y1="160" x2="540" y2="160"/>
+    <line x1="60" y1="240" x2="540" y2="240"/>
+    <line x1="60" y1="320" x2="540" y2="320"/>
+    <line x1="60" y1="400" x2="540" y2="400"/>
+    <line x1="60" y1="480" x2="540" y2="480"/>
+    <line x1="60" y1="560" x2="540" y2="560"/>
+    <line x1="60" y1="640" x2="540" y2="640"/>
+    <line x1="60" y1="720" x2="540" y2="720"/>
+  </g>
+
+  <!-- Margin line (red-line style but grey) -->
+  <line x1="110" y1="60" x2="110" y2="740" stroke="#555" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Abstract text blocks — white bars at different weights -->
+  <!-- Simulating large headline type -->
+  <rect x="120" y="80" width="380" height="36" rx="1" fill="white" opacity="0.11"/>
+  <rect x="120" y="80" width="380" height="36" rx="1" fill="none" stroke="white" stroke-width="0.5" opacity="0.15"/>
+
+  <!-- Subhead block -->
+  <rect x="120" y="128" width="260" height="14" rx="1" fill="white" opacity="0.07"/>
+
+  <!-- Body copy blocks (small) -->
+  <rect x="120" y="160" width="380" height="6" rx="1" fill="white" opacity="0.05"/>
+  <rect x="120" y="172" width="350" height="6" rx="1" fill="white" opacity="0.05"/>
+  <rect x="120" y="184" width="365" height="6" rx="1" fill="white" opacity="0.05"/>
+  <rect x="120" y="196" width="300" height="6" rx="1" fill="white" opacity="0.05"/>
+
+  <!-- Section break -->
+  <rect x="120" y="220" width="380" height="28" rx="1" fill="white" opacity="0.08"/>
+  <rect x="120" y="258" width="220" height="10" rx="1" fill="white" opacity="0.06"/>
+
+  <!-- Pull quote mark -->
+  <text x="125" y="390" font-family="Georgia,serif" font-size="120" fill="white" opacity="0.06">"</text>
+
+  <!-- Small body text columns -->
+  <g opacity="0.04" fill="white">
+    <!-- Column 1 -->
+    <rect x="120" y="460" width="170" height="5" rx="1"/>
+    <rect x="120" y="470" width="165" height="5" rx="1"/>
+    <rect x="120" y="480" width="170" height="5" rx="1"/>
+    <rect x="120" y="490" width="155" height="5" rx="1"/>
+    <rect x="120" y="500" width="168" height="5" rx="1"/>
+    <rect x="120" y="510" width="162" height="5" rx="1"/>
+    <rect x="120" y="520" width="170" height="5" rx="1"/>
+    <rect x="120" y="530" width="140" height="5" rx="1"/>
+    <!-- Column 2 -->
+    <rect x="310" y="460" width="170" height="5" rx="1"/>
+    <rect x="310" y="470" width="155" height="5" rx="1"/>
+    <rect x="310" y="480" width="170" height="5" rx="1"/>
+    <rect x="310" y="490" width="165" height="5" rx="1"/>
+    <rect x="310" y="500" width="158" height="5" rx="1"/>
+    <rect x="310" y="510" width="170" height="5" rx="1"/>
+    <rect x="310" y="520" width="150" height="5" rx="1"/>
+    <rect x="310" y="530" width="170" height="5" rx="1"/>
+  </g>
+
+  <!-- White accent marks (punctuation-like) -->
+  <circle cx="115" cy="107" r="3" fill="white" opacity="0.25"/>
+  <circle cx="115" cy="245" r="3" fill="white" opacity="0.2"/>
+  <rect x="112" y="462" width="6" height="6" fill="white" opacity="0.2"/>
+  <rect x="112" y="542" width="6" height="3" fill="white" opacity="0.15"/>
+
+  <!-- Drop cap "T" in corner -->
+  <rect x="120" y="560" width="55" height="9" fill="white" opacity="0.12"/>
+  <rect x="141" y="569" width="13" height="80" fill="white" opacity="0.12"/>
+
+  <!-- Label -->
+  <text x="300" y="760" text-anchor="middle" font-family="monospace" font-size="9" fill="white" opacity="0.25" letter-spacing="5">BLACK · WHITE · TYPOGRAPHY</text>
+</svg>

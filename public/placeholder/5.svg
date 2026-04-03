@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0A0A"/>
+      <stop offset="60%" stop-color="#150800"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <radialGradient id="sunRetro" cx="50%" cy="52%" r="45%">
+      <stop offset="0%" stop-color="#ff6600" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#cc3300" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#8b008b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="purpleAura" cx="50%" cy="80%" r="60%">
+      <stop offset="0%" stop-color="#6600cc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#6600cc" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow5">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <clipPath id="clip5">
+      <rect width="600" height="800"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg5)"/>
+  <rect width="600" height="800" fill="url(#sunRetro)"/>
+  <rect width="600" height="800" fill="url(#purpleAura)"/>
+
+  <!-- Retro sunset — sun with horizontal stripe bands -->
+  <!-- Sun outer glow -->
+  <circle cx="300" cy="420" r="160" fill="#ff4400" opacity="0.06" filter="url(#glow5)"/>
+  <circle cx="300" cy="420" r="110" fill="#ff6600" opacity="0.08" filter="url(#glow5)"/>
+
+  <!-- Sun disk with stripe mask -->
+  <circle cx="300" cy="420" r="100" fill="#1a0a00"/>
+
+  <!-- Sun stripes (the classic retro sunset look) -->
+  <g clip-path="url(#clip5)">
+    <g>
+      <!-- Each pair of colored + dark strip inside the sun -->
+      <rect x="200" y="310" width="200" height="9" fill="#ff6600" opacity="0.95"/>
+      <rect x="200" y="319" width="200" height="5" fill="#0f0600"/>
+      <rect x="200" y="324" width="200" height="8" fill="#ff5500" opacity="0.9"/>
+      <rect x="200" y="332" width="200" height="5" fill="#0f0600"/>
+      <rect x="200" y="337" width="200" height="8" fill="#ff4400" opacity="0.85"/>
+      <rect x="200" y="345" width="200" height="6" fill="#0f0600"/>
+      <rect x="200" y="351" width="200" height="8" fill="#ff3300" opacity="0.8"/>
+      <rect x="200" y="359" width="200" height="7" fill="#0f0600"/>
+      <rect x="200" y="366" width="200" height="9" fill="#cc2200" opacity="0.75"/>
+      <rect x="200" y="375" width="200" height="8" fill="#0f0600"/>
+      <rect x="200" y="383" width="200" height="10" fill="#aa1100" opacity="0.7"/>
+      <rect x="200" y="393" width="200" height="9" fill="#0f0600"/>
+      <rect x="200" y="402" width="200" height="11" fill="#881100" opacity="0.65"/>
+      <rect x="200" y="413" width="200" height="10" fill="#0f0600"/>
+      <rect x="200" y="423" width="200" height="12" fill="#660a00" opacity="0.6"/>
+      <rect x="200" y="435" width="200" height="11" fill="#0f0600"/>
+      <rect x="200" y="446" width="200" height="13" fill="#440800" opacity="0.55"/>
+      <rect x="200" y="459" width="200" height="62" fill="#0f0600"/>
+      <!-- Sun circle clipping mask -->
+      <circle cx="300" cy="420" r="100" fill="none" stroke="#0A0A0A" stroke-width="0"/>
+    </g>
+    <!-- Actual circle mask using same-color circle on top of overflow -->
+    <path d="M300,420 m-101,0 a101,101 0 1,1 202,0 a101,101 0 1,1 -202,0 Z M300,420 m-100,0 a100,100 0 1,0 200,0 a100,100 0 1,0 -200,0 Z" fill="#0A0A0A"/>
+  </g>
+
+  <!-- Sun circle border glow -->
+  <circle cx="300" cy="420" r="100" fill="none" stroke="#ff6600" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="300" cy="420" r="100" fill="none" stroke="#ff6600" stroke-width="8" opacity="0.1" filter="url(#glow5)"/>
+
+  <!-- Horizon line -->
+  <line x1="0" y1="420" x2="600" y2="420" stroke="#ff4400" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Flat horizon ground (purple-ish) -->
+  <rect x="0" y="420" width="600" height="380" fill="#08000f" opacity="0.95"/>
+
+  <!-- Retro perspective grid on ground -->
+  <g stroke="#6600cc" stroke-width="0.5" opacity="0.35">
+    <!-- Vanishing lines -->
+    <line x1="300" y1="420" x2="0" y2="800"/>
+    <line x1="300" y1="420" x2="50" y2="800"/>
+    <line x1="300" y1="420" x2="120" y2="800"/>
+    <line x1="300" y1="420" x2="200" y2="800"/>
+    <line x1="300" y1="420" x2="280" y2="800"/>
+    <line x1="300" y1="420" x2="320" y2="800"/>
+    <line x1="300" y1="420" x2="400" y2="800"/>
+    <line x1="300" y1="420" x2="480" y2="800"/>
+    <line x1="300" y1="420" x2="550" y2="800"/>
+    <line x1="300" y1="420" x2="600" y2="800"/>
+    <!-- Horizontal cross lines -->
+    <line x1="0" y1="470" x2="600" y2="470"/>
+    <line x1="0" y1="520" x2="600" y2="520"/>
+    <line x1="0" y1="575" x2="600" y2="575"/>
+    <line x1="0" y1="635" x2="600" y2="635"/>
+    <line x1="0" y1="700" x2="600" y2="700"/>
+    <line x1="0" y1="770" x2="600" y2="770"/>
+  </g>
+
+  <!-- Palm tree silhouettes (retro) -->
+  <!-- Left palm -->
+  <rect x="88" y="300" width="8" height="130" fill="#0a0305" rx="2"/>
+  <path d="M92,305 C70,260 30,240 15,245 C35,255 55,275 68,300" fill="#0a0305"/>
+  <path d="M92,305 C80,255 55,230 40,232 C58,248 72,268 80,298" fill="#0a0305"/>
+  <path d="M92,305 C100,255 125,238 140,242 C120,254 105,272 98,298" fill="#0a0305"/>
+  <path d="M92,305 C104,260 135,248 148,255 C126,262 108,278 100,305" fill="#0a0305"/>
+
+  <!-- Right palm -->
+  <rect x="502" y="310" width="8" height="120" fill="#0a0305" rx="2"/>
+  <path d="M506,315 C484,268 444,250 428,254 C448,264 468,282 482,308" fill="#0a0305"/>
+  <path d="M506,315 C514,268 540,252 554,256 C534,268 518,285 512,310" fill="#0a0305"/>
+  <path d="M506,315 C520,270 544,260 556,264 C536,272 520,288 514,312" fill="#0a0305"/>
+
+  <!-- Stars / planets in sky -->
+  <g fill="#ff9933" opacity="0.6">
+    <circle cx="80" cy="120" r="1.5"/>
+    <circle cx="160" cy="80" r="1"/>
+    <circle cx="240" cy="140" r="1.2"/>
+    <circle cx="100" cy="200" r="0.8"/>
+    <circle cx="480" cy="100" r="1.5"/>
+    <circle cx="530" cy="160" r="1"/>
+    <circle cx="420" cy="80" r="1.2"/>
+    <circle cx="450" cy="220" r="0.8"/>
+  </g>
+  <!-- Small planet -->
+  <circle cx="480" cy="180" r="8" fill="#cc3300" opacity="0.5"/>
+  <circle cx="480" cy="180" r="8" fill="none" stroke="#ff6600" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- Orange horizon glow line -->
+  <line x1="0" y1="418" x2="600" y2="418" stroke="#ff6600" stroke-width="2" opacity="0.3" filter="url(#glow5)"/>
+
+  <!-- Purple mountain silhouettes -->
+  <path d="M0,420 L80,340 L160,395 L240,310 L320,370 L400,295 L480,360 L560,330 L600,380 L600,420 Z"
+        fill="#1a0028" opacity="0.9"/>
+  <path d="M0,420 L60,375 L140,400 L220,360 L300,395 L380,350 L460,385 L540,365 L600,390 L600,420 Z"
+        fill="#0f0018" opacity="0.95"/>
+
+  <!-- Label -->
+  <text x="300" y="760" text-anchor="middle" font-family="monospace" font-size="10" fill="#ff6600" opacity="0.4" letter-spacing="4">ORANGE · WARM PURPLE · RETRO</text>
+</svg>
