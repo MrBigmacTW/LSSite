@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GalleryPageContent from "./GalleryPageContent";
@@ -19,7 +20,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     id: p.id,
     title: p.title,
     tags: JSON.parse(p.tags) as string[],
-    thumbnailUrl: `/uploads/${p.designImage}`,
+    thumbnailUrl: imageUrl(p.designImage),
     price: p.price,
     date: new Date(p.createdAt).toLocaleDateString("zh-TW"),
   }));

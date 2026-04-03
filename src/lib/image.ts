@@ -38,9 +38,9 @@ export async function saveDesignImage(
 ): Promise<string> {
   const designPath = `designs/${productId}/original.png`;
 
-  // Convert to PNG and save original
+  // Convert to PNG and save
   const pngBuffer = await sharp(buffer).png().toBuffer();
-  await storage.upload(pngBuffer, designPath);
+  const savedPath = await storage.upload(pngBuffer, designPath);
 
   // Generate thumbnails
   for (const size of THUMB_SIZES) {
@@ -51,7 +51,7 @@ export async function saveDesignImage(
     await storage.upload(thumbBuffer, `thumbnails/${productId}/thumb_${size}.webp`);
   }
 
-  return designPath;
+  return savedPath; // Returns full URL on Vercel Blob, or local path on dev
 }
 
 export async function generateMockup(
@@ -60,7 +60,6 @@ export async function generateMockup(
   printArea: { x: number; y: number; width: number; height: number },
   outputPath: string
 ): Promise<string> {
-  // Read the design image from storage
   const designFullPath = `${process.cwd()}/public/uploads/${designPath}`;
   const templateFullPath = `${process.cwd()}/public/uploads/${templateImagePath}`;
 
@@ -76,6 +75,6 @@ export async function generateMockup(
     .jpeg({ quality: 90 })
     .toBuffer();
 
-  await storage.upload(mockupBuffer, outputPath);
-  return outputPath;
+  const saved = await storage.upload(mockupBuffer, outputPath);
+  return saved;
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import GallerySection from "@/components/GallerySection";
@@ -16,7 +17,7 @@ export default async function Home() {
     id: p.id,
     title: p.title,
     tags: JSON.parse(p.tags) as string[],
-    thumbnailUrl: `/uploads/${p.designImage}`,
+    thumbnailUrl: imageUrl(p.designImage),
     price: p.price,
     date: new Date(p.createdAt).toLocaleDateString("zh-TW"),
   }));

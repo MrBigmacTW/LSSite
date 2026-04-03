@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { imageUrl } from "@/lib/url";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -27,10 +28,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <div className="grid md:grid-cols-[1.5fr_1fr] gap-8 md:gap-16">
           {/* Left — Image viewer */}
           <MockupViewer
-            designImage={`/uploads/${product.designImage}`}
+            designImage={imageUrl(product.designImage)}
             mockups={mockups.map((m) => ({
               label: m.template.replace(/_/g, " "),
-              url: `/uploads/${m.path}`,
+              url: imageUrl(m.path),
             }))}
           />
 
@@ -73,7 +74,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               productId={product.id}
               title={product.title}
               price={product.price}
-              mockupUrl={`/uploads/${product.designImage}`}
+              mockupUrl={imageUrl(product.designImage)}
             />
 
             {/* Divider */}
