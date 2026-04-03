@@ -17,55 +17,60 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   });
 }
 
-// PATCH /api/templates/[id] — 更新模板（printArea、底圖等）
+// PATCH /api/templates/[id]
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateSession();
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
-  const contentType = req.headers.get("content-type") || "";
 
-  if (contentType.includes("multipart/form-data")) {
-    // 上傳底圖
-    const formData = await req.formData();
-    const file = formData.get("baseImage") as File | null;
-    const printAreaRaw = formData.get("printArea") as string | null;
+  try {
+    const contentType = req.headers.get("content-type") || "";
 
-    const updateData: Record<string, unknown> = {};
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const file = formData.get("baseImage") as File | null;
+      const printAreaRaw = formData.get("printArea") as string | null;
 
-    if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const filePath = `templates/${id}/base.png`;
-      const savedPath = await storage.upload(buffer, filePath);
-      updateData.imagePath = savedPath.startsWith("http") ? savedPath : `/${filePath}`;
+      const updateData: Record<string, unknown> = {};
+
+      if (file) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const filePath = `templates/${id}/base.png`;
+        const savedPath = await storage.upload(buffer, filePath);
+        // Blob 回傳完整 URL，本地回傳相對路徑
+        updateData.imagePath = savedPath;
+      }
+
+      if (printAreaRaw) {
+        updateData.printArea = printAreaRaw;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await updateTemplate(id, updateData);
+      }
+    } else {
+      const body = await req.json();
+      const updateData: Record<string, unknown> = {};
+
+      if (body.name) updateData.name = body.name;
+      if (body.printArea) updateData.printArea = JSON.stringify(body.printArea);
+      if (body.imagePath) updateData.imagePath = body.imagePath;
+      if (body.active !== undefined) updateData.active = body.active ? 1 : 0;
+      if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
+
+      if (Object.keys(updateData).length > 0) {
+        await updateTemplate(id, updateData);
+      }
     }
 
-    if (printAreaRaw) {
-      updateData.printArea = printAreaRaw; // Already JSON string
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await updateTemplate(id, updateData);
-    }
-  } else {
-    // JSON body
-    const body = await req.json();
-    const updateData: Record<string, unknown> = {};
-
-    if (body.name) updateData.name = body.name;
-    if (body.printArea) updateData.printArea = JSON.stringify(body.printArea);
-    if (body.imagePath) updateData.imagePath = body.imagePath;
-    if (body.active !== undefined) updateData.active = body.active ? 1 : 0;
-    if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
-
-    if (Object.keys(updateData).length > 0) {
-      await updateTemplate(id, updateData);
-    }
+    const updated = await getTemplateById(id);
+    return NextResponse.json({
+      ...updated,
+      printArea: typeof updated!.printArea === "string" ? JSON.parse(updated!.printArea as string) : updated!.printArea,
+    });
+  } catch (err) {
+    console.error("Template update error:", err);
+    return NextResponse.json({ error: "更新失敗", detail: String(err) }, { status: 500 });
   }
-
-  const updated = await getTemplateById(id);
-  return NextResponse.json({
-    ...updated,
-    printArea: typeof updated!.printArea === "string" ? JSON.parse(updated!.printArea as string) : updated!.printArea,
-  });
 }

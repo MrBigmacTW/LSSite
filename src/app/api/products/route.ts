@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, getPublishedProducts, getTemplates, updateProductMockups } from "@/lib/db";
+import { db, getTemplates, updateProductMockups } from "@/lib/db";
 import { authenticateAny, requirePermission } from "@/lib/auth";
-import { validateImage, saveDesignImage } from "@/lib/image";
-import { generateAllMockups } from "@/lib/mockup-engine";
+import { storage } from "@/lib/storage";
 import crypto from "crypto";
 
 // GET /api/products
@@ -43,7 +42,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ products });
 }
 
-// POST /api/products — 建立商品 + 自動合成 Mockup
+// POST /api/products — 建立商品
 export async function POST(req: NextRequest) {
   const authResult = await authenticateAny(req);
   if (!authResult.authenticated) return authResult.response;
@@ -51,46 +50,65 @@ export async function POST(req: NextRequest) {
   const permError = requirePermission(authResult, "create");
   if (permError) return permError;
 
-  const formData = await req.formData();
-  const title = formData.get("title") as string;
-  const description = (formData.get("description") as string) || "";
-  const priceRaw = formData.get("price") as string;
-  const tagsRaw = formData.get("tags") as string;
-  const source = (formData.get("source") as string) || "manual";
-  const aiMetadata = (formData.get("ai_metadata") as string) || "";
-  const designFile = formData.get("design_image") as File | null;
-  const price = priceRaw ? parseInt(priceRaw) : 1280;
-
-  if (!title) return NextResponse.json({ error: "title 為必填" }, { status: 400 });
-  if (!designFile) return NextResponse.json({ error: "design_image 為必填" }, { status: 400 });
-
-  let tags: string[] = [];
-  try { tags = tagsRaw ? JSON.parse(tagsRaw) : []; } catch {
-    return NextResponse.json({ error: "tags 格式錯誤" }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await designFile.arrayBuffer());
-  const validation = await validateImage(buffer);
-  if (!validation.valid) return NextResponse.json({ error: validation.error }, { status: 400 });
-
-  const productId = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
-  const now = new Date().toISOString();
-
-  // 儲存設計圖
-  const designPath = await saveDesignImage(buffer, productId);
-
-  // 建立商品
-  await db.execute({
-    sql: `INSERT INTO Product (id, title, description, price, tags, source, aiMetadata, designImage, mockups, status, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]', 'pending_review', ?, ?)`,
-    args: [productId, title, description, price, JSON.stringify(tags), source, aiMetadata || null, designPath, now, now],
-  });
-
-  // 合成 Mockup（同步執行，確保結果寫入）
   try {
+    const formData = await req.formData();
+    const title = formData.get("title") as string;
+    const description = (formData.get("description") as string) || "";
+    const priceRaw = formData.get("price") as string;
+    const tagsRaw = formData.get("tags") as string;
+    const source = (formData.get("source") as string) || "manual";
+    const aiMetadata = (formData.get("ai_metadata") as string) || "";
+    const designFile = formData.get("design_image") as File | null;
+    const price = priceRaw ? parseInt(priceRaw) : 1280;
+
+    if (!title) return NextResponse.json({ error: "title 為必填" }, { status: 400 });
+    if (!designFile) return NextResponse.json({ error: "design_image 為必填" }, { status: 400 });
+
+    let tags: string[] = [];
+    try { tags = tagsRaw ? JSON.parse(tagsRaw) : []; } catch {
+      return NextResponse.json({ error: "tags 格式錯誤" }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(await designFile.arrayBuffer());
+    const productId = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+    const now = new Date().toISOString();
+
+    // 直接上傳原圖到 storage（不做 Sharp 處理，避免 Vercel 上 crash）
+    const designPath = await storage.upload(buffer, `designs/${productId}/original.png`);
+
+    // 建立商品
+    await db.execute({
+      sql: `INSERT INTO Product (id, title, description, price, tags, source, aiMetadata, designImage, mockups, status, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]', 'pending_review', ?, ?)`,
+      args: [productId, title, description, price, JSON.stringify(tags), source, aiMetadata || null, designPath, now, now],
+    });
+
+    // 嘗試合成 Mockup（非阻擋性）
+    generateMockupsInBackground(productId, designPath).catch((err) => {
+      console.error("Mockup generation failed (non-blocking):", err);
+    });
+
+    return NextResponse.json(
+      { id: productId, status: "pending_review", message: "商品已建立，Mockup 合成中" },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("Product creation error:", err);
+    return NextResponse.json(
+      { error: "商品建立失敗", detail: String(err) },
+      { status: 500 }
+    );
+  }
+}
+
+// 背景合成 Mockup（不阻擋回應）
+async function generateMockupsInBackground(productId: string, designPath: string) {
+  try {
+    const { generateAllMockups } = await import("@/lib/mockup-engine");
     const templates = await getTemplates();
+
     const templateInfos = templates
-      .filter((t) => t.imagePath) // 只處理有底圖的模板
+      .filter((t) => t.imagePath)
       .map((t) => ({
         slug: t.slug as string,
         imagePath: t.imagePath as string,
@@ -102,14 +120,9 @@ export async function POST(req: NextRequest) {
     if (templateInfos.length > 0) {
       const mockups = await generateAllMockups(designPath, templateInfos, productId);
       await updateProductMockups(productId, mockups);
+      console.log(`Mockups generated for ${productId}: ${mockups.length} items`);
     }
   } catch (err) {
-    console.error("Mockup generation error:", err);
-    // 不阻擋商品建立，Mockup 失敗可以之後重新合成
+    console.error(`Mockup generation error for ${productId}:`, err);
   }
-
-  return NextResponse.json(
-    { id: productId, status: "pending_review", mockups_generating: false, message: "商品已建立，等待審核" },
-    { status: 201 }
-  );
 }

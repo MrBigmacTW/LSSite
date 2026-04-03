@@ -40,8 +40,14 @@ export default function NewProductPage() {
 
     const res = await fetch("/api/products", { method: "POST", body: formData });
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "建立失敗");
+      let errMsg = "建立失敗";
+      try {
+        const data = await res.json();
+        errMsg = data.error || data.detail || `HTTP ${res.status}`;
+      } catch {
+        errMsg = `HTTP ${res.status} — ${res.statusText}`;
+      }
+      setError(errMsg);
       setLoading(false);
       return;
     }
