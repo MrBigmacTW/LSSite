@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { compressImage } from "@/lib/compress-image";
 
 const STYLE_OPTIONS = [
   "japanese", "street", "minimal", "illustration",
@@ -36,7 +37,8 @@ export default function NewProductPage() {
     formData.append("price", price);
     formData.append("tags", JSON.stringify(selectedTags));
     formData.append("source", "manual");
-    formData.append("design_image", file);
+    const compressed = await compressImage(file);
+    formData.append("design_image", compressed);
 
     const res = await fetch("/api/products", { method: "POST", body: formData });
     if (!res.ok) {

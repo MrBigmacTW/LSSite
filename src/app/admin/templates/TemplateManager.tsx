@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PrintAreaEditor from "./PrintAreaEditor";
 import { imageUrl } from "@/lib/url";
+import { compressImage } from "@/lib/compress-image";
 
 interface Template {
   id: string;
@@ -23,14 +24,23 @@ export default function TemplateManager({ templates }: { templates: Template[] }
 
   async function handleUploadBase(templateId: string, file: File) {
     setUploading(templateId);
-    const formData = new FormData();
-    formData.append("baseImage", file);
+    try {
+      const compressed = await compressImage(file, 2400, 0.9);
+      const formData = new FormData();
+      formData.append("baseImage", compressed);
 
-    await fetch(`/api/templates/${templateId}`, {
-      method: "PATCH",
-      body: formData,
-    });
+      const res = await fetch(`/api/templates/${templateId}`, {
+        method: "PATCH",
+        body: formData,
+      });
 
+      if (!res.ok) {
+        const data = await res.json();
+        alert(`上傳失敗: ${data.error || res.statusText}`);
+      }
+    } catch (err) {
+      alert(`上傳錯誤: ${err}`);
+    }
     setUploading(null);
     router.refresh();
   }
