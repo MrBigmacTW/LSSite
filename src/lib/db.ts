@@ -150,6 +150,37 @@ export async function getTemplates() {
   return result.rows.map((r) => rowToObj(r, result.columns));
 }
 
+export async function getAllTemplates() {
+  const result = await db.execute("SELECT * FROM MockupTemplate ORDER BY sortOrder ASC");
+  return result.rows.map((r) => rowToObj(r, result.columns));
+}
+
+export async function getTemplateById(id: string) {
+  const result = await db.execute({ sql: "SELECT * FROM MockupTemplate WHERE id = ?", args: [id] });
+  if (result.rows.length === 0) return null;
+  return rowToObj(result.rows[0], result.columns);
+}
+
+export async function updateTemplate(id: string, data: Record<string, unknown>) {
+  const sets: string[] = [];
+  const args: (string | number | null)[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    sets.push(`${key} = ?`);
+    args.push(val as string | number | null);
+  }
+  if (sets.length === 0) return;
+  args.push(id);
+  await db.execute({ sql: `UPDATE MockupTemplate SET ${sets.join(", ")} WHERE id = ?`, args });
+}
+
+export async function updateProductMockups(productId: string, mockups: { template: string; path: string }[]) {
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: "UPDATE Product SET mockups = ?, updatedAt = ? WHERE id = ?",
+    args: [JSON.stringify(mockups), now, productId],
+  });
+}
+
 export async function getPendingProducts() {
   const result = await db.execute(
     "SELECT * FROM Product WHERE status = 'pending_review' ORDER BY createdAt DESC"
