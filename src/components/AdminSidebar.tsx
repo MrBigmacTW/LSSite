@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/admin/review", label: "審核區", icon: "◎" },
   { href: "/admin/products", label: "商品管理", icon: "▦" },
   { href: "/admin/orders", label: "訂單管理", icon: "◈" },
+  { href: "/admin/generate", label: "龍蝦藝術家", icon: "🦞" },
   { href: "/admin/templates", label: "模板管理", icon: "⬡" },
 ];
 
