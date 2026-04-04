@@ -1,9 +1,9 @@
 name: 🦞 龍蝦藝術家
 
 on:
-  # 每小時檢查一次排程
+  # 每小時整點檢查排程（台灣 0-23 點）
   schedule:
-    - cron: '0 * * * *'  # 每小時整點
+    - cron: '0 1-15 * * *'  # UTC 1-15 = 台灣 9:00-23:00（只在有可能有排程的時段跑）
 
   # 手動觸發
   workflow_dispatch:
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 🦞 檢查排程並執行
+      - name: 🦞 執行
         working-directory: lobster-artist
         env:
           KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
@@ -45,7 +45,6 @@ jobs:
           SCHEDULE_API_URL: https://ls-site-seven.vercel.app/api/schedules
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # 手動觸發：用輸入的參數
             COUNT=${{ github.event.inputs.count || '3' }}
             STYLE="${{ github.event.inputs.style || '' }}"
             PRICE=${{ github.event.inputs.price || '1280' }}
@@ -58,37 +57,35 @@ jobs:
             echo "🦞 手動觸發: $ARGS"
             node lobster_upload.js $ARGS
           else
-            # 排程觸發：查詢當前小時的排程
-            CURRENT_HOUR=$(TZ=Asia/Taipei date +%H | sed 's/^0//')
+            CURRENT_HOUR=$(TZ=Asia/Taipei date +%-H)
             echo "🕐 台灣時間: $(TZ=Asia/Taipei date '+%H:%M') (hour=$CURRENT_HOUR)"
 
-            SCHEDULES=$(curl -s "${SCHEDULE_API_URL}?hour=${CURRENT_HOUR}")
-            COUNT=$(echo "$SCHEDULES" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('schedules',[])))")
+            SCHEDULES=$(curl -sf "${SCHEDULE_API_URL}?hour=${CURRENT_HOUR}" || echo '{"schedules":[]}')
+            SCOUNT=$(echo "$SCHEDULES" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('schedules',[])))" 2>/dev/null || echo "0")
 
-            if [ "$COUNT" = "0" ]; then
+            if [ "$SCOUNT" = "0" ]; then
               echo "😴 這個時段沒有排程，跳過"
               exit 0
             fi
 
-            echo "📋 找到 $COUNT 個排程"
+            echo "📋 找到 $SCOUNT 個排程"
 
-            # 逐個執行
             echo "$SCHEDULES" | python3 -c "
-import sys, json
-schedules = json.load(sys.stdin).get('schedules', [])
-for s in schedules:
-    print(f\"{s.get('name','')}|{s.get('count',3)}|{s.get('style','')}|{s.get('price',1280)}|{s.get('prompt','')}\")
-" | while IFS='|' read -r NAME N STYLE PRICE PROMPT; do
+          import sys, json
+          for s in json.load(sys.stdin).get('schedules', []):
+              print(f\"{s.get('name','')}\t{s.get('count',3)}\t{s.get('style','')}\t{s.get('price',1280)}\t{s.get('prompt','')}\")
+          " | while IFS=$'\t' read -r NAME N STYLE PRICE PROMPT; do
               echo ""
-              echo "🦞 執行排程: $NAME ($STYLE, $N 張)"
-              ARGS="-n $N -s $STYLE -p $PRICE"
+              echo "🦞 排程: $NAME ($STYLE, $N 張)"
+              ARGS="-n $N -p $PRICE"
+              [ -n "$STYLE" ] && ARGS="$ARGS -s $STYLE"
               [ -n "$PROMPT" ] && export AI_PROMPT="$PROMPT"
-              node lobster_upload.js $ARGS || echo "⚠️ $NAME 執行失敗"
+              node lobster_upload.js $ARGS || echo "⚠️ $NAME 執行失敗（不中斷）"
               sleep 5
             done
           fi
 
-      - name: 保存生成記錄
+      - name: 保存記錄
         if: always()
         uses: actions/upload-artifact@v4
         with:
