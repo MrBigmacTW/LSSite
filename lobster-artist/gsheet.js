@@ -46,42 +46,29 @@ async function getExistingDesigns() {
  * 新增一筆設計記錄到 Sheet（用 Google Apps Script Web App 或直接 append）
  */
 async function addDesignRecord(design) {
-  // 方法：用 Google Sheets API v4 append（需要 API Key）
-  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
+  const WEBHOOK_URL = process.env.GOOGLE_SHEET_WEBHOOK || "https://script.google.com/macros/s/AKfycbzwOBQE7RTRyFhvpVueoM7S4yrOk6FXUYcNM5WNfByaeAKfqAj28GC4mLObrsT57LxpQA/exec";
 
-  if (GOOGLE_API_KEY) {
-    try {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A:G:append?valueInputOption=USER_ENTERED&key=${GOOGLE_API_KEY}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          values: [[
-            design.title || "",
-            design.style || "",
-            design.status || "已生成",
-            (design.prompt || "").slice(0, 500),
-            design.description || "",
-            new Date().toISOString().slice(0, 10),
-            design.productId || "",
-          ]],
-        }),
-      });
-
-      if (res.ok) {
-        console.log("   📝 已寫入 Google Sheet");
-      } else {
-        // API Key 方式失敗，試 fallback
-        throw new Error(await res.text());
-      }
-    } catch (err) {
-      console.log(`   ⚠️ Sheet API 寫入失敗: ${err.message}`);
-      // Fallback: 輸出到 console 讓使用者手動貼
-      console.log(`   📋 手動貼入 Sheet: ${design.title}\t${design.style}\t已生成\t${(design.prompt || "").slice(0, 100)}...\t${design.description}\t${new Date().toISOString().slice(0, 10)}\t${design.productId}`);
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: design.title || "",
+        style: design.style || "",
+        status: design.status || "已生成",
+        prompt: (design.prompt || "").slice(0, 500),
+        description: design.description || "",
+        date: new Date().toISOString().slice(0, 10),
+        productId: design.productId || "",
+      }),
+    });
+    if (res.ok) {
+      console.log("   📝 已寫入 Google Sheet");
+    } else {
+      throw new Error(`HTTP ${res.status}`);
     }
-  } else {
-    // 沒有 API Key，直接輸出
-    console.log(`   📋 [Sheet 記錄] ${design.title} | ${design.style} | ${design.productId}`);
+  } catch (err) {
+    console.log(`   ⚠️ Sheet 寫入失敗: ${err.message}`);
   }
 }
 
