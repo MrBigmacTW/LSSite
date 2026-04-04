@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin/orders", label: "訂單管理", icon: "◈" },
   { href: "/admin/generate", label: "龍蝦藝術家", icon: "🦞" },
   { href: "/admin/styles", label: "風格管理", icon: "🎨" },
+  { href: "/admin/emails", label: "Email 通知", icon: "📧" },
   { href: "/admin/templates", label: "模板管理", icon: "⬡" },
 ];
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured, decryptTradeInfo } from "@/lib/newebpay";
 import { db } from "@/lib/db";
-import { sendOrderConfirmation } from "@/lib/email";
+import { sendAllOrderEmails } from "@/lib/email";
 
 // POST /api/payment/notify — 藍新背景通知（付款結果）
 export async function POST(req: NextRequest) {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
           args: [order.id],
         });
 
-        await sendOrderConfirmation({
+        await sendAllOrderEmails({
           orderNo: order.orderNo as string,
           name: order.name as string,
           email: order.email as string,

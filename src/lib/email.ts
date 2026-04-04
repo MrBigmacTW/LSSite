@@ -1,11 +1,13 @@
 /**
- * 訂單確認 Email（用 Resend 寄送）
+ * 訂單 Email 系統（Resend）
+ * 付款成功時寄出三封信：客戶確認 / 印刷廠通知 / 老闆通知
  */
 
 import { Resend } from "resend";
+import { db } from "./db";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "");
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev"; // 用自己的域名更好
+const FROM = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
 interface OrderItem {
   title: string;
@@ -15,7 +17,7 @@ interface OrderItem {
   mockupUrl?: string;
 }
 
-interface OrderEmailData {
+interface OrderData {
   orderNo: string;
   name: string;
   email: string;
@@ -25,98 +27,144 @@ interface OrderEmailData {
   items: OrderItem[];
 }
 
-export async function sendOrderConfirmation(order: OrderEmailData) {
+interface EmailConfig {
+  id: string;
+  name: string;
+  enabled: number;
+  recipientType: string;
+  recipientEmail: string;
+  subject: string;
+  headerText: string;
+  footerText: string;
+}
+
+// 讀取 Email 設定
+async function getEmailConfigs(): Promise<EmailConfig[]> {
+  const result = await db.execute("SELECT * FROM EmailConfig WHERE enabled = 1");
+  return result.rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    enabled: r.enabled as number,
+    recipientType: r.recipientType as string,
+    recipientEmail: r.recipientEmail as string,
+    subject: r.subject as string,
+    headerText: r.headerText as string,
+    footerText: r.footerText as string,
+  }));
+}
+
+// 替換模板變數
+function replaceVars(template: string, order: OrderData): string {
+  return template
+    .replace(/\{orderNo\}/g, order.orderNo)
+    .replace(/\{name\}/g, order.name)
+    .replace(/\{totalAmount\}/g, order.totalAmount.toLocaleString())
+    .replace(/\{phone\}/g, order.phone)
+    .replace(/\{email\}/g, order.email);
+}
+
+// 商品明細 HTML
+function itemsTable(items: OrderItem[]): string {
+  return items.map((item) => `
+    <tr>
+      <td style="padding:10px;border-bottom:1px solid #333;">
+        ${item.mockupUrl ? `<img src="${item.mockupUrl}" width="50" height="50" style="object-fit:contain;background:#111;" />` : "—"}
+      </td>
+      <td style="padding:10px;border-bottom:1px solid #333;color:#F0EDE6;">
+        <strong>${item.title}</strong><br/>
+        <span style="color:#A8A49C;font-size:12px;">尺寸：${item.size}</span>
+      </td>
+      <td style="padding:10px;border-bottom:1px solid #333;color:#A8A49C;text-align:center;">x${item.quantity}</td>
+      <td style="padding:10px;border-bottom:1px solid #333;color:#F0EDE6;text-align:right;">NT$ ${(item.price * item.quantity).toLocaleString()}</td>
+    </tr>`).join("");
+}
+
+// 生成 Email HTML
+function buildHtml(config: EmailConfig, order: OrderData, type: string): string {
+  const header = replaceVars(config.headerText || "", order);
+  const footer = replaceVars(config.footerText || "", order);
+  const showAddress = type !== "printer"; // 印刷廠不需要看地址
+
+  return `
+  <div style="max-width:600px;margin:0 auto;background:#0A0A0A;padding:32px 24px;font-family:'Helvetica Neue',Arial,sans-serif;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="color:#E8432A;font-size:16px;letter-spacing:3px;font-weight:600;">LOBSTER</span>
+      <span style="color:#F0EDE6;font-size:16px;letter-spacing:3px;font-weight:600;"> ART</span>
+    </div>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <h2 style="color:#F0EDE6;font-size:18px;margin:0 0 6px;">${replaceVars(config.subject, order)}</h2>
+      ${header ? `<p style="color:#A8A49C;font-size:13px;margin:0;">${header}</p>` : ""}
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead>
+        <tr style="border-bottom:2px solid #333;">
+          <th style="padding:6px 10px;color:#6B6760;font-size:10px;text-align:left;width:50px;">圖</th>
+          <th style="padding:6px 10px;color:#6B6760;font-size:10px;text-align:left;">商品</th>
+          <th style="padding:6px 10px;color:#6B6760;font-size:10px;text-align:center;">數量</th>
+          <th style="padding:6px 10px;color:#6B6760;font-size:10px;text-align:right;">小計</th>
+        </tr>
+      </thead>
+      <tbody>${itemsTable(order.items)}</tbody>
+    </table>
+
+    <div style="text-align:right;padding:12px;border-top:2px solid #333;margin-bottom:24px;">
+      <span style="color:#A8A49C;font-size:13px;">總計</span>
+      <span style="color:#F0EDE6;font-size:22px;font-weight:bold;margin-left:12px;">NT$ ${order.totalAmount.toLocaleString()}</span>
+    </div>
+
+    ${showAddress ? `
+    <div style="background:#111;border:1px solid #1A1A1A;padding:16px;margin-bottom:24px;">
+      <p style="color:#C9A96E;font-size:10px;letter-spacing:2px;margin:0 0 8px;">收件資訊</p>
+      <p style="color:#F0EDE6;margin:3px 0;font-size:13px;">${order.name}</p>
+      <p style="color:#A8A49C;margin:3px 0;font-size:12px;">${order.phone}</p>
+      <p style="color:#A8A49C;margin:3px 0;font-size:12px;">${order.email}</p>
+      <p style="color:#A8A49C;margin:3px 0;font-size:12px;">${order.address}</p>
+    </div>` : ""}
+
+    ${footer ? `<p style="color:#6B6760;font-size:11px;text-align:center;margin-top:20px;">${footer}</p>` : ""}
+    <p style="color:#6B6760;font-size:10px;text-align:center;letter-spacing:1px;margin-top:16px;border-top:1px solid #1A1A1A;padding-top:16px;">LOBSTER ART 2026</p>
+  </div>`;
+}
+
+/**
+ * 付款成功時寄出所有 Email
+ */
+export async function sendAllOrderEmails(order: OrderData) {
   if (!process.env.RESEND_API_KEY) {
     console.log("⚠️ RESEND_API_KEY 未設定，跳過寄信");
     return;
   }
 
-  const itemsHtml = order.items
-    .map(
-      (item) => `
-      <tr>
-        <td style="padding:12px;border-bottom:1px solid #333;">
-          ${item.mockupUrl ? `<img src="${item.mockupUrl}" width="60" height="60" style="object-fit:contain;background:#111;border-radius:4px;" />` : ""}
-        </td>
-        <td style="padding:12px;border-bottom:1px solid #333;color:#F0EDE6;">
-          <strong>${item.title}</strong><br/>
-          <span style="color:#A8A49C;font-size:13px;">尺寸：${item.size}</span>
-        </td>
-        <td style="padding:12px;border-bottom:1px solid #333;color:#A8A49C;text-align:center;">
-          x${item.quantity}
-        </td>
-        <td style="padding:12px;border-bottom:1px solid #333;color:#F0EDE6;text-align:right;">
-          NT$ ${(item.price * item.quantity).toLocaleString()}
-        </td>
-      </tr>`
-    )
-    .join("");
+  const configs = await getEmailConfigs();
 
-  const html = `
-  <div style="max-width:600px;margin:0 auto;background:#0A0A0A;padding:40px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
-    <!-- Header -->
-    <div style="text-align:center;margin-bottom:32px;">
-      <h1 style="color:#E8432A;font-size:18px;letter-spacing:4px;margin:0;">
-        LOBSTER <span style="color:#F0EDE6;">ART</span>
-      </h1>
-    </div>
+  for (const config of configs) {
+    // 決定收件人
+    let to: string;
+    if (config.recipientType === "customer") {
+      to = order.email;
+    } else {
+      to = config.recipientEmail;
+      if (!to) {
+        console.log(`⚠️ ${config.name}: 收件人未設定，跳過`);
+        continue;
+      }
+    }
 
-    <!-- Title -->
-    <div style="text-align:center;margin-bottom:32px;">
-      <div style="width:48px;height:48px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:4px;margin:0 auto 16px;line-height:48px;font-size:24px;">✓</div>
-      <h2 style="color:#F0EDE6;font-size:22px;margin:0 0 8px;">付款成功</h2>
-      <p style="color:#A8A49C;font-size:14px;margin:0;">訂單編號：<strong style="color:#F0EDE6;">${order.orderNo}</strong></p>
-    </div>
+    const subject = replaceVars(config.subject, order);
+    const html = buildHtml(config, order, config.id);
 
-    <!-- Order Items -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-      <thead>
-        <tr style="border-bottom:2px solid #333;">
-          <th style="padding:8px 12px;color:#6B6760;font-size:11px;text-align:left;letter-spacing:1px;width:60px;">圖片</th>
-          <th style="padding:8px 12px;color:#6B6760;font-size:11px;text-align:left;letter-spacing:1px;">商品</th>
-          <th style="padding:8px 12px;color:#6B6760;font-size:11px;text-align:center;letter-spacing:1px;">數量</th>
-          <th style="padding:8px 12px;color:#6B6760;font-size:11px;text-align:right;letter-spacing:1px;">小計</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemsHtml}
-      </tbody>
-    </table>
-
-    <!-- Total -->
-    <div style="text-align:right;padding:16px 12px;border-top:2px solid #333;margin-bottom:32px;">
-      <span style="color:#A8A49C;font-size:14px;">總計</span>
-      <span style="color:#F0EDE6;font-size:24px;font-weight:bold;margin-left:16px;">NT$ ${order.totalAmount.toLocaleString()}</span>
-    </div>
-
-    <!-- Shipping Info -->
-    <div style="background:#111;border:1px solid #1A1A1A;padding:20px;margin-bottom:32px;">
-      <h3 style="color:#C9A96E;font-size:11px;letter-spacing:2px;margin:0 0 12px;">收件資訊</h3>
-      <p style="color:#F0EDE6;margin:4px 0;font-size:14px;">${order.name}</p>
-      <p style="color:#A8A49C;margin:4px 0;font-size:13px;">${order.phone}</p>
-      <p style="color:#A8A49C;margin:4px 0;font-size:13px;">${order.address}</p>
-    </div>
-
-    <!-- Footer -->
-    <div style="text-align:center;border-top:1px solid #1A1A1A;padding-top:24px;">
-      <p style="color:#6B6760;font-size:11px;letter-spacing:1px;margin:0;">
-        LOBSTER ART 2026
-      </p>
-      <p style="color:#6B6760;font-size:11px;margin:8px 0 0;">
-        有任何問題請回覆此信件
-      </p>
-    </div>
-  </div>`;
-
-  try {
-    await resend.emails.send({
-      from: `龍蝦藝術網 <${FROM_EMAIL}>`,
-      to: order.email,
-      subject: `訂單確認 ${order.orderNo} — 龍蝦藝術網`,
-      html,
-    });
-    console.log(`📧 確認信已寄送: ${order.email}`);
-  } catch (err) {
-    console.error("📧 寄信失敗:", err);
+    try {
+      await resend.emails.send({
+        from: `龍蝦藝術網 <${FROM}>`,
+        to,
+        subject,
+        html,
+      });
+      console.log(`📧 ${config.name} → ${to}`);
+    } catch (err) {
+      console.error(`📧 ${config.name} 寄送失敗:`, err);
+    }
   }
 }
