@@ -67,18 +67,21 @@ function replaceVars(template: string, order: OrderData): string {
 
 // 商品明細 HTML
 function itemsTable(items: OrderItem[]): string {
-  return items.map((item) => `
+  return items.map((item) => {
+    const imgSrc = item.designUrl || item.mockupUrl || "";
+    return `
     <tr>
       <td style="padding:10px;border-bottom:1px solid #333;">
-        ${item.mockupUrl ? `<img src="${item.mockupUrl}" width="50" height="50" style="object-fit:contain;background:#111;" />` : "—"}
-      </td>
+        ${imgSrc ? `<img src="${imgSrc}" width="50" height="50" style="object-fit:contain;background:#111;border-radius:4px;" />` : "—"}
+      </td>`;
       <td style="padding:10px;border-bottom:1px solid #333;color:#F0EDE6;">
         <strong>${item.title}</strong><br/>
         <span style="color:#A8A49C;font-size:12px;">尺寸：${item.size}</span>
       </td>
       <td style="padding:10px;border-bottom:1px solid #333;color:#A8A49C;text-align:center;">x${item.quantity}</td>
       <td style="padding:10px;border-bottom:1px solid #333;color:#F0EDE6;text-align:right;">NT$ ${(item.price * item.quantity).toLocaleString()}</td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
 
 // 生成 Email HTML

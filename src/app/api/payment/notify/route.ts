@@ -41,9 +41,15 @@ export async function POST(req: NextRequest) {
       if (orderResult.rows.length > 0) {
         const order = orderResult.rows[0];
         const itemsResult = await db.execute({
-          sql: "SELECT * FROM OrderItem WHERE orderId = ?",
+          sql: "SELECT oi.*, p.designImage FROM OrderItem oi LEFT JOIN Product p ON oi.productId = p.id WHERE oi.orderId = ?",
           args: [order.id],
         });
+
+        const imgUrl = (path: string) => {
+          if (!path) return "";
+          if (path.startsWith("http")) return path;
+          return `https://ls-site-seven.vercel.app${path.startsWith("/") ? path : `/uploads/${path}`}`;
+        };
 
         await sendAllOrderEmails({
           orderNo: order.orderNo as string,
@@ -57,6 +63,7 @@ export async function POST(req: NextRequest) {
             size: i.size as string,
             quantity: i.quantity as number,
             price: i.price as number,
+            designUrl: imgUrl(i.designImage as string || ""),
             mockupUrl: (i.mockupUrl as string) || undefined,
           })),
         });
