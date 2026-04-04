@@ -40,6 +40,9 @@ async function aiGenerateDesigns(count, style, existingDesigns = []) {
 
   const styleHint = style ? `全部使用 ${style} 風格。` : "每張用不同的風格，從以下選擇：japanese, street, minimal, illustration, retro, nature, abstract。";
 
+  // 排程的自訂 AI 指示
+  const customPrompt = process.env.AI_PROMPT || "";
+
   // 把已有設計告訴 AI 避免重複
   let existingHint = "";
   if (existingDesigns.length > 0) {
@@ -50,7 +53,7 @@ async function aiGenerateDesigns(count, style, existingDesigns = []) {
   const prompt = `你是一個 T-shirt 設計的藝術總監。請為今天生成 ${count} 個獨特的設計方案。
 
 ${styleHint}${existingHint}
-
+${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 要求：
 1. 每個設計要有明確的視覺主題，適合印在衣服上
 2. 構圖集中、白色背景、不要有文字

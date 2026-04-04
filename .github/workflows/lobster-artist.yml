@@ -1,11 +1,11 @@
 name: 🦞 龍蝦藝術家
 
 on:
-  # 每天早上 9 點（台灣時間）自動跑
+  # 每小時檢查一次排程
   schedule:
-    - cron: '0 1 * * *'  # UTC 1:00 = 台灣 9:00
+    - cron: '0 * * * *'  # 每小時整點
 
-  # 也可以手動觸發
+  # 手動觸發
   workflow_dispatch:
     inputs:
       count:
@@ -17,6 +17,9 @@ on:
       price:
         description: '售價'
         default: '1280'
+      prompt:
+        description: 'AI 指示'
+        default: ''
 
 jobs:
   generate:
@@ -32,28 +35,58 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 🦞 生成圖片並上傳
+      - name: 🦞 檢查排程並執行
         working-directory: lobster-artist
         env:
           KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
           LOBSTER_API_KEY: ${{ secrets.LOBSTER_API_KEY }}
           LOBSTER_API_URL: https://ls-site-seven.vercel.app/api/products
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          SCHEDULE_API_URL: https://ls-site-seven.vercel.app/api/schedules
         run: |
-          COUNT=${{ github.event.inputs.count || '3' }}
-          STYLE=${{ github.event.inputs.style || '' }}
-          PRICE=${{ github.event.inputs.price || '1280' }}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # 手動觸發：用輸入的參數
+            COUNT=${{ github.event.inputs.count || '3' }}
+            STYLE="${{ github.event.inputs.style || '' }}"
+            PRICE=${{ github.event.inputs.price || '1280' }}
+            PROMPT="${{ github.event.inputs.prompt || '' }}"
 
-          ARGS="-n $COUNT"
-          if [ -n "$STYLE" ]; then
-            ARGS="$ARGS -s $STYLE"
+            ARGS="-n $COUNT -p $PRICE"
+            [ -n "$STYLE" ] && ARGS="$ARGS -s $STYLE"
+            [ -n "$PROMPT" ] && export AI_PROMPT="$PROMPT"
+
+            echo "🦞 手動觸發: $ARGS"
+            node lobster_upload.js $ARGS
+          else
+            # 排程觸發：查詢當前小時的排程
+            CURRENT_HOUR=$(TZ=Asia/Taipei date +%H | sed 's/^0//')
+            echo "🕐 台灣時間: $(TZ=Asia/Taipei date '+%H:%M') (hour=$CURRENT_HOUR)"
+
+            SCHEDULES=$(curl -s "${SCHEDULE_API_URL}?hour=${CURRENT_HOUR}")
+            COUNT=$(echo "$SCHEDULES" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('schedules',[])))")
+
+            if [ "$COUNT" = "0" ]; then
+              echo "😴 這個時段沒有排程，跳過"
+              exit 0
+            fi
+
+            echo "📋 找到 $COUNT 個排程"
+
+            # 逐個執行
+            echo "$SCHEDULES" | python3 -c "
+import sys, json
+schedules = json.load(sys.stdin).get('schedules', [])
+for s in schedules:
+    print(f\"{s.get('name','')}|{s.get('count',3)}|{s.get('style','')}|{s.get('price',1280)}|{s.get('prompt','')}\")
+" | while IFS='|' read -r NAME N STYLE PRICE PROMPT; do
+              echo ""
+              echo "🦞 執行排程: $NAME ($STYLE, $N 張)"
+              ARGS="-n $N -s $STYLE -p $PRICE"
+              [ -n "$PROMPT" ] && export AI_PROMPT="$PROMPT"
+              node lobster_upload.js $ARGS || echo "⚠️ $NAME 執行失敗"
+              sleep 5
+            done
           fi
-          ARGS="$ARGS -p $PRICE"
-
-          echo "🦞 執行: node lobster_upload.js $ARGS"
-          node lobster_upload.js $ARGS
 
       - name: 保存生成記錄
         if: always()
