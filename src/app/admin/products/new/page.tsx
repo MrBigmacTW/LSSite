@@ -97,14 +97,14 @@ export default function NewProductPage() {
         {/* Description */}
         <div>
           <label className="block font-mono text-[11px] text-fg3 uppercase tracking-[1px] mb-2">
-            Description
+            設計理念
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             className="w-full px-4 py-3 bg-bg2 border border-bg3 text-fg text-sm focus:border-accent outline-none transition-colors resize-none"
-            placeholder="設計描述..."
+            placeholder="這個設計的靈感來源、創作理念..."
           />
         </div>
 

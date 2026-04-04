@@ -55,11 +55,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <div className="w-full h-px bg-bg3" />
 
+            {/* 設計理念 */}
             {(product.description as string) && (
-              <p className="font-body text-[15px] text-fg2 font-light leading-[2]">
-                {product.description as string}
-              </p>
+              <div>
+                <span className="block font-mono text-[11px] text-gold uppercase tracking-[2px] mb-3">
+                  Design Story
+                </span>
+                <p className="font-body text-[15px] text-fg2 font-light leading-[2]">
+                  {product.description as string}
+                </p>
+              </div>
             )}
+
+            <div className="w-full h-px bg-bg3" />
 
             <AddToCartButton
               productId={product.id as string}
