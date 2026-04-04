@@ -24,6 +24,7 @@ export default function ReviewList({ initialProducts }: ReviewListProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   async function handlePublish(id: string) {
     await fetch(`/api/products/${id}/publish`, { method: "POST" });
@@ -79,6 +80,16 @@ export default function ReviewList({ initialProducts }: ReviewListProps) {
 
   return (
     <div>
+      {/* Lightbox 放大預覽 */}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="preview" className="max-w-full max-h-full object-contain" />
+          <button onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white font-mono text-lg hover:text-accent">✕ 關閉</button>
+        </div>
+      )}
+
       {/* Batch actions */}
       {selected.size > 0 && (
         <div className="flex items-center gap-4 mb-6 p-4 bg-bg2 border border-bg3">
@@ -116,27 +127,21 @@ export default function ReviewList({ initialProducts }: ReviewListProps) {
                 />
               </div>
 
-              {/* Design image — 大圖預覽 */}
-              <div className="w-32 h-32 md:w-40 md:h-40 bg-bg3 flex-shrink-0 overflow-hidden">
+              {/* Design image — 點擊放大 */}
+              <div className="w-32 h-32 md:w-40 md:h-40 bg-bg3 flex-shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-accent transition-all"
+                onClick={() => product.designImage && setLightbox(imageUrl(product.designImage))}>
                 {product.designImage && (
-                  <img
-                    src={imageUrl(product.designImage)}
-                    alt={product.title}
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={imageUrl(product.designImage)} alt={product.title} className="w-full h-full object-contain" />
                 )}
               </div>
 
-              {/* Mockup 縮圖 */}
+              {/* Mockup 縮圖 — 點擊放大 */}
               {product.mockups.length > 0 && (
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   {product.mockups.slice(0, 4).map((m) => (
-                    <div key={m.template} className="w-16 h-16 bg-bg3 overflow-hidden">
-                      <img
-                        src={imageUrl(m.path)}
-                        alt={m.template}
-                        className="w-full h-full object-contain"
-                      />
+                    <div key={m.template} className="w-16 h-16 bg-bg3 overflow-hidden cursor-pointer hover:ring-1 hover:ring-accent transition-all"
+                      onClick={() => setLightbox(imageUrl(m.path))}>
+                      <img src={imageUrl(m.path)} alt={m.template} className="w-full h-full object-contain" />
                     </div>
                   ))}
                 </div>

@@ -28,6 +28,7 @@ const STYLE_OPTIONS = [
 export default function GeneratePage() {
   const router = useRouter();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [history, setHistory] = useState<{ name: string; style: string; status: string; prompt: string; desc: string; date: string; pid: string }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
@@ -289,6 +290,51 @@ export default function GeneratePage() {
             <p className="text-center py-8 font-mono text-[13px] text-fg3">還沒有排程，點「+ 新增排程」開始</p>
           )}
         </div>
+      </div>
+
+      {/* 生成記錄 */}
+      <div className="bg-bg2 border border-bg3 p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-base font-medium text-fg">生成記錄</h2>
+          <button onClick={async () => {
+            try {
+              const res = await fetch("https://docs.google.com/spreadsheets/d/14gmf2VSva8ODDhhYiAh-ZxZ6bYtynioVGTIACJjEKeo/gviz/tq?tqx=out:json");
+              const text = await res.text();
+              const jsonStr = text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)?.[1];
+              if (!jsonStr) return;
+              const data = JSON.parse(jsonStr);
+              const rows = data.table?.rows || [];
+              const items = rows.map((row: { c: ({ v: string } | null)[] }) => ({
+                name: row.c?.[0]?.v || "", style: row.c?.[1]?.v || "", status: row.c?.[2]?.v || "",
+                prompt: row.c?.[3]?.v || "", desc: row.c?.[4]?.v || "", date: row.c?.[5]?.v || "", pid: row.c?.[6]?.v || "",
+              })).filter((r: { name: string }) => r.name && r.name !== "名稱");
+              setHistory(items.reverse());
+            } catch {}
+          }}
+            className="px-4 py-1.5 border border-bg3 font-mono text-[11px] text-fg3 hover:text-fg2 hover:border-fg3 transition-colors">
+            載入記錄
+          </button>
+        </div>
+        {history.length === 0 ? (
+          <p className="font-mono text-[12px] text-fg3">點「載入記錄」查看 Google Sheet 歷史</p>
+        ) : (
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {history.map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-1.5 border-b border-bg3/50 last:border-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-body text-sm text-fg">{item.name}</span>
+                  <span className="px-1.5 py-0.5 font-mono text-[9px] text-accent border border-accent/20 uppercase">{item.style}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`font-mono text-[10px] ${item.status === "已上架" ? "text-green-400" : item.status === "已退回" ? "text-red-400" : "text-yellow-400"}`}>
+                    {item.status}
+                  </span>
+                  <span className="font-mono text-[10px] text-fg3">{item.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 系統資訊 */}
