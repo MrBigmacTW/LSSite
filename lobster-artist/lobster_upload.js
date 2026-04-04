@@ -14,7 +14,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { getExistingDesigns, addDesignRecord } = require("./notion");
+const { getExistingDesigns, addDesignRecord } = require("./gsheet");
 
 // ===== 設定 =====
 const KIE_API_KEY = process.env.KIE_API_KEY || "";
