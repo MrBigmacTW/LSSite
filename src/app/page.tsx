@@ -11,14 +11,18 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const products = await getPublishedProducts(8);
 
-  const galleryItems = products.map((p) => ({
-    id: p.id as string,
-    title: p.title as string,
-    tags: JSON.parse(p.tags as string) as string[],
-    thumbnailUrl: imageUrl(p.designImage as string),
-    price: p.price as number,
-    date: "",
-  }));
+  const galleryItems = products.map((p) => {
+    const mockups = JSON.parse((p.mockups as string) || "[]");
+    const thumb = mockups.length > 0 ? imageUrl(mockups[0].path) : imageUrl(p.designImage as string);
+    return {
+      id: p.id as string,
+      title: p.title as string,
+      tags: JSON.parse(p.tags as string) as string[],
+      thumbnailUrl: thumb,
+      price: p.price as number,
+      date: "",
+    };
+  });
 
   return (
     <>

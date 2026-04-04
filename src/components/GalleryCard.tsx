@@ -34,7 +34,7 @@ export default function GalleryCard({ item, featured }: GalleryCardProps) {
           src={item.thumbnailUrl}
           alt={item.title}
           className="w-full h-full object-contain transition-transform duration-600 group-hover:scale-[1.03]"
-          style={{ background: "#f5f5f5" }}
+          style={{ background: "#161616" }}
           loading="lazy"
         />
       </div>
