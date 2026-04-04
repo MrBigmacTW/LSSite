@@ -26,8 +26,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   return (
     <>
       <Navbar />
-      <main className="px-5 md:px-12 py-12 md:py-20">
-        <div className="grid md:grid-cols-[1.5fr_1fr] gap-8 md:gap-16">
+      <main className="px-4 md:px-12 py-8 md:py-20 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-[1fr_1fr] gap-6 md:gap-12">
           <MockupViewer
             designImage={imageUrl(product.designImage as string)}
             mockups={mockups.map((m) => ({

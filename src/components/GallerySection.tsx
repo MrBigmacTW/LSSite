@@ -38,7 +38,7 @@ export default function GallerySection({ items }: GallerySectionProps) {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
           {filteredItems.map((item, i) => (
-            <GalleryCard key={item.id} item={item} featured={i === 0} />
+            <GalleryCard key={item.id} item={item} featured={i === 0 && filteredItems.length >= 4} />
           ))}
         </div>
       )}

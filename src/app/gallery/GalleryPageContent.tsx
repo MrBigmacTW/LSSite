@@ -44,7 +44,7 @@ export default function GalleryPageContent({ items, initialStyle }: Props) {
           <p className="font-mono text-fg3 text-sm">目前這個風格還沒有商品</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
           {filtered.map((item) => (
             <GalleryCard key={item.id} item={item} />
           ))}

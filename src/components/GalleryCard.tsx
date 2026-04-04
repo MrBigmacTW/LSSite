@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 export interface GalleryItem {
@@ -27,49 +26,38 @@ export default function GalleryCard({ item, featured }: GalleryCardProps) {
         hover:border-fg3 transition-colors duration-400
         ${featured ? "row-span-2" : ""}
       `}
-      style={{ aspectRatio: featured ? undefined : "3/4" }}
+      style={{ aspectRatio: featured ? "3/5" : "3/4" }}
     >
-      {/* Image */}
+      {/* Image — 用 img 避免 next/image remote pattern 問題 */}
       <div className="absolute inset-0">
-        <Image
+        <img
           src={item.thumbnailUrl}
           alt={item.title}
-          fill
-          className="object-cover transition-transform duration-600 group-hover:scale-[1.03]"
-          sizes={featured ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
+          className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-[1.03]"
+          loading="lazy"
         />
       </div>
 
       {/* Tag badge — top left */}
       {item.tags[0] && (
-        <span className="absolute top-3 left-3 z-10 px-2 py-1 font-mono text-[9px] uppercase tracking-[1px] text-accent border border-accent/30 bg-bg/60 backdrop-blur-sm">
+        <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] text-accent border border-accent/30 bg-bg/60 backdrop-blur-sm">
           {item.tags[0]}
         </span>
       )}
 
       {/* Price — top right */}
       {item.price != null && (
-        <span className="absolute top-3 right-3 z-10 px-2 py-1 font-mono text-[11px] text-fg bg-bg/70 backdrop-blur-sm">
+        <span className="absolute top-2 right-2 z-10 px-1.5 py-0.5 font-mono text-[10px] text-fg bg-bg/70 backdrop-blur-sm">
           NT$ {item.price.toLocaleString()}
         </span>
       )}
 
-      {/* Hover overlay — slides up from bottom */}
-      <div className="absolute inset-x-0 bottom-0 z-10 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-[cubic-bezier(0.22,1,0.36,1)]">
-        <div className="bg-gradient-to-t from-[rgba(10,10,10,0.95)] to-transparent pt-12 pb-1 -mx-4 -mb-4 px-4">
-          <h3 className="font-display text-[15px] font-medium text-fg">
+      {/* Hover overlay */}
+      <div className="absolute inset-x-0 bottom-0 z-10 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-[cubic-bezier(0.22,1,0.36,1)]">
+        <div className="bg-gradient-to-t from-[rgba(10,10,10,0.95)] to-transparent pt-10 pb-1 -mx-3 -mb-3 px-3">
+          <h3 className="font-display text-[13px] md:text-[15px] font-medium text-fg truncate">
             {item.title}
           </h3>
-          {item.titleEn && (
-            <p className="font-display text-[13px] font-light text-fg2 mt-0.5">
-              {item.titleEn}
-            </p>
-          )}
-          {item.date && (
-            <p className="font-mono text-[10px] text-fg3 mt-2 tracking-[1px] uppercase">
-              {item.date}
-            </p>
-          )}
         </div>
       </div>
     </Link>

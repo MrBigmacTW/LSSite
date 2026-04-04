@@ -37,13 +37,13 @@ export default function AddToCartButton({
         <span className="block font-mono text-[11px] text-fg3 uppercase tracking-[1px] mb-3">
           尺寸
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {SIZES.map((size) => (
             <button
               key={size}
               onClick={() => setSelectedSize(size)}
               className={`
-                w-12 h-12 font-mono text-[12px] border transition-all duration-200
+                w-11 h-11 md:w-12 md:h-12 font-mono text-[12px] border transition-all duration-200
                 ${selectedSize === size
                   ? "border-accent text-accent bg-accent/[0.08]"
                   : "border-bg3 text-fg3 hover:border-fg3 hover:text-fg2"
