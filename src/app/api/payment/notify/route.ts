@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured, decryptTradeInfo } from "@/lib/newebpay";
 import { db } from "@/lib/db";
+import { sendOrderConfirmation } from "@/lib/email";
 
 // POST /api/payment/notify — 藍新背景通知（付款結果）
 export async function POST(req: NextRequest) {
@@ -25,10 +26,41 @@ export async function POST(req: NextRequest) {
       const { MerchantOrderNo, TradeNo, PaymentType } = Result;
       const now = new Date().toISOString();
 
+      // 更新訂單狀態
       await db.execute({
         sql: `UPDATE "Order" SET status = 'paid', tradeNo = ?, paymentType = ?, paidAt = ?, updatedAt = ? WHERE orderNo = ?`,
         args: [TradeNo, PaymentType, now, now, MerchantOrderNo],
       });
+
+      // 查詢訂單詳情 + 寄確認信
+      const orderResult = await db.execute({
+        sql: `SELECT * FROM "Order" WHERE orderNo = ?`,
+        args: [MerchantOrderNo],
+      });
+
+      if (orderResult.rows.length > 0) {
+        const order = orderResult.rows[0];
+        const itemsResult = await db.execute({
+          sql: "SELECT * FROM OrderItem WHERE orderId = ?",
+          args: [order.id],
+        });
+
+        await sendOrderConfirmation({
+          orderNo: order.orderNo as string,
+          name: order.name as string,
+          email: order.email as string,
+          phone: order.phone as string,
+          address: order.address as string,
+          totalAmount: order.totalAmount as number,
+          items: itemsResult.rows.map((i) => ({
+            title: i.title as string,
+            size: i.size as string,
+            quantity: i.quantity as number,
+            price: i.price as number,
+            mockupUrl: (i.mockupUrl as string) || undefined,
+          })),
+        });
+      }
 
       console.log(`訂單 ${MerchantOrderNo} 付款成功，交易編號 ${TradeNo}`);
     } else {
