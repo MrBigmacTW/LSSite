@@ -4,6 +4,9 @@ import { authenticateAny, requirePermission } from "@/lib/auth";
 import { storage } from "@/lib/storage";
 import crypto from "crypto";
 
+// Vercel: 給合成引擎更多執行時間（預設 10s，改 60s）
+export const maxDuration = 60;
+
 // GET /api/products
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -83,13 +86,32 @@ export async function POST(req: NextRequest) {
       args: [productId, title, description, price, JSON.stringify(tags), source, aiMetadata || null, designPath, now, now],
     });
 
-    // 嘗試合成 Mockup（非阻擋性）
-    generateMockupsInBackground(productId, designPath).catch((err) => {
-      console.error("Mockup generation failed (non-blocking):", err);
-    });
+    // 同步合成 Mockup（Vercel 上背景任務會被砍，必須同步）
+    let mockupCount = 0;
+    try {
+      const { generateAllMockups } = await import("@/lib/mockup-engine");
+      const templates = await getTemplates();
+      const templateInfos = templates
+        .filter((t) => t.imagePath)
+        .map((t) => ({
+          slug: t.slug as string,
+          imagePath: t.imagePath as string,
+          printArea: typeof t.printArea === "string"
+            ? JSON.parse(t.printArea as string)
+            : t.printArea,
+        }));
+
+      if (templateInfos.length > 0) {
+        const mockups = await generateAllMockups(designPath, templateInfos, productId);
+        await updateProductMockups(productId, mockups);
+        mockupCount = mockups.length;
+      }
+    } catch (mockupErr) {
+      console.error("Mockup generation failed:", mockupErr);
+    }
 
     return NextResponse.json(
-      { id: productId, status: "pending_review", message: "商品已建立，Mockup 合成中" },
+      { id: productId, status: "pending_review", mockups: mockupCount, message: `商品已建立，${mockupCount} 張 Mockup 已合成` },
       { status: 201 }
     );
   } catch (err) {
@@ -101,28 +123,16 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 背景合成 Mockup（不阻擋回應）
-async function generateMockupsInBackground(productId: string, designPath: string) {
+// validateImage: 基本圖片驗證
+async function validateImage(buffer: Buffer) {
+  const sharp = (await import("sharp")).default;
   try {
-    const { generateAllMockups } = await import("@/lib/mockup-engine");
-    const templates = await getTemplates();
-
-    const templateInfos = templates
-      .filter((t) => t.imagePath)
-      .map((t) => ({
-        slug: t.slug as string,
-        imagePath: t.imagePath as string,
-        printArea: typeof t.printArea === "string"
-          ? JSON.parse(t.printArea as string)
-          : t.printArea,
-      }));
-
-    if (templateInfos.length > 0) {
-      const mockups = await generateAllMockups(designPath, templateInfos, productId);
-      await updateProductMockups(productId, mockups);
-      console.log(`Mockups generated for ${productId}: ${mockups.length} items`);
+    const meta = await sharp(buffer).metadata();
+    if (!meta.format || !["png", "jpeg", "jpg", "webp"].includes(meta.format)) {
+      return { valid: false, error: `不支援的格式: ${meta.format}` };
     }
-  } catch (err) {
-    console.error(`Mockup generation error for ${productId}:`, err);
+    return { valid: true };
+  } catch {
+    return { valid: false, error: "無法讀取圖片" };
   }
 }
