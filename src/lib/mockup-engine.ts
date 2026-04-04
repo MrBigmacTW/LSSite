@@ -1,6 +1,6 @@
 /**
  * Mockup 合成引擎
- * 自動偵測設計圖背景明暗，選擇最佳混合模式
+ * 自動偵測背景 + 智慧去背 + 合成到模板
  */
 
 import sharp from "sharp";
@@ -20,22 +20,17 @@ interface TemplateInfo {
 }
 
 async function loadImage(imagePath: string): Promise<Buffer> {
-  // 完整 URL（Blob 或外部）
   if (imagePath.startsWith("http")) {
     const res = await fetch(imagePath);
     if (!res.ok) throw new Error(`Failed to fetch: ${imagePath}`);
     return Buffer.from(await res.arrayBuffer());
   }
-
-  // 以 / 開頭的相對路徑 → 先試本地，失敗則用 fetch 從自己的域名讀
   const fs = await import("fs/promises");
   const path = await import("path");
-
   const localPath = path.join(process.cwd(), "public", imagePath);
   try {
     return await fs.readFile(localPath);
   } catch {
-    // Vercel 上 public 檔案不在 serverless fs，用 HTTP 讀
     const baseUrl = process.env.NEXTAUTH_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}${imagePath}`);
@@ -45,30 +40,47 @@ async function loadImage(imagePath: string): Promise<Buffer> {
 }
 
 /**
- * 偵測圖片邊緣平均亮度（0=全黑, 255=全白）
- * 只取樣 4 個角落小區域，速度快
+ * 快速去白背景：用 Sharp 內建功能
+ * 1. 取灰階版 → 反轉 → 當作 alpha channel
+ * 2. 白色區域 alpha=0（透明），深色區域 alpha=255（不透明）
  */
-async function detectBrightness(buffer: Buffer): Promise<number> {
-  // 縮小到 20x20 取樣（超快）
-  const { data } = await sharp(buffer)
-    .resize(20, 20, { fit: "fill" })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+async function removeWhiteBackground(buffer: Buffer): Promise<Buffer> {
+  const img = sharp(buffer);
+  const meta = await img.metadata();
 
-  // 只看邊緣像素（外圈）
-  let sum = 0, count = 0;
-  for (let y = 0; y < 20; y++) {
-    for (let x = 0; x < 20; x++) {
-      if (x < 2 || x > 17 || y < 2 || y > 17) {
-        const idx = (y * 20 + x) * 3;
-        sum += (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-        count++;
-      }
+  // 如果已經有 alpha channel（PNG 透明底），直接用
+  if (meta.channels === 4) {
+    // 檢查是否真的有透明像素（不是假的 alpha）
+    const stats = await sharp(buffer).stats();
+    const alphaChannel = stats.channels[3];
+    if (alphaChannel && alphaChannel.min < 200) {
+      // 已有有效透明度，直接回傳
+      console.log("  已有透明背景，跳過去背");
+      return buffer;
     }
   }
 
-  return Math.round(sum / count);
+  // 用 Sharp pipeline 去白背景：
+  // 1. 產生灰階 mask（白=0, 黑=255）
+  const mask = await sharp(buffer)
+    .greyscale()
+    .negate()           // 白→黑, 黑→白
+    .threshold(230)     // 接近白色的區域 → 黑（alpha=0）
+    .negate()           // 反轉回來：背景=黑(透明), 主體=白(不透明)
+    .toBuffer();
+
+  // 2. 把 mask 當 alpha channel 合併到原圖
+  const rgb = await sharp(buffer)
+    .removeAlpha()
+    .toBuffer();
+
+  const result = await sharp(rgb)
+    .joinChannel(mask)
+    .png()
+    .toBuffer();
+
+  console.log("  白背景已移除");
+  return result;
 }
 
 /**
@@ -80,43 +92,28 @@ export async function composeMockup(
 ): Promise<Buffer> {
   const { x, y, width, height } = template.printArea;
 
-  // 偵測背景亮度
-  const brightness = await detectBrightness(designBuffer);
+  // 自動去白背景
+  const cleanDesign = await removeWhiteBackground(designBuffer);
 
-  // 選擇混合模式
-  // 暗背景 → screen（黑色消失）
-  // 亮背景 → multiply（白色消失）
-  // 中間調 → over + 半透明
-  let blend: string;
-  if (brightness < 80) {
-    blend = "screen";
-  } else if (brightness > 180) {
-    blend = "multiply";
-  } else {
-    blend = "over";
-  }
-
-  console.log(`  背景亮度: ${brightness} → blend: ${blend}`);
-
-  // Resize 設計圖到 printArea 大小
-  const resizedDesign = await sharp(designBuffer)
+  // Resize 到 printArea 大小
+  const resizedDesign = await sharp(cleanDesign)
     .resize(width, height, {
       fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
-    .ensureAlpha()
+    .png()
     .toBuffer();
 
   // 載入模板底圖
   const baseBuffer = await loadImage(template.imagePath);
 
-  // 合成
+  // 合成（over 模式，因為已經去背了）
   const mockupBuffer = await sharp(baseBuffer)
     .composite([{
       input: resizedDesign,
       left: x,
       top: y,
-      blend: blend as "screen" | "multiply" | "over",
+      blend: "over" as const,
     }])
     .jpeg({ quality: 90 })
     .toBuffer();
