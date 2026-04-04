@@ -38,6 +38,9 @@ jobs:
           KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
           LOBSTER_API_KEY: ${{ secrets.LOBSTER_API_KEY }}
           LOBSTER_API_URL: https://ls-site-seven.vercel.app/api/products
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
         run: |
           COUNT=${{ github.event.inputs.count || '3' }}
           STYLE=${{ github.event.inputs.style || '' }}
