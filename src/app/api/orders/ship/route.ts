@@ -33,11 +33,19 @@ export async function POST(req: NextRequest) {
     args: [now, orderNo],
   });
 
-  // 查詢訂單商品
+  // 查詢訂單商品 + 對應的商品設計圖
   const itemsResult = await db.execute({
-    sql: "SELECT * FROM OrderItem WHERE orderId = ?",
+    sql: "SELECT oi.*, p.designImage FROM OrderItem oi LEFT JOIN Product p ON oi.productId = p.id WHERE oi.orderId = ?",
     args: [order.id],
   });
+
+  // imageUrl helper
+  const imgUrl = (path: string) => {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    if (path.startsWith("/")) return `https://ls-site-seven.vercel.app${path}`;
+    return `https://ls-site-seven.vercel.app/uploads/${path}`;
+  };
 
   // 寄出通知信
   await sendAllOrderEmails({
@@ -52,6 +60,7 @@ export async function POST(req: NextRequest) {
       size: i.size as string,
       quantity: i.quantity as number,
       price: i.price as number,
+      designUrl: imgUrl(i.designImage as string || ""),
       mockupUrl: (i.mockupUrl as string) || undefined,
     })),
   });

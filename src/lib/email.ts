@@ -15,6 +15,8 @@ interface OrderItem {
   quantity: number;
   price: number;
   mockupUrl?: string;
+  designUrl?: string; // 原始設計圖 URL（給印刷廠用）
+  productId?: string;
 }
 
 interface OrderData {
@@ -156,13 +158,35 @@ export async function sendAllOrderEmails(order: OrderData) {
     const html = buildHtml(config, order, config.id);
 
     try {
+      // 印刷廠的信附加設計圖
+      const attachments: { filename: string; content: Buffer }[] = [];
+      if (config.id === "printer") {
+        for (const item of order.items) {
+          const imgUrl = item.designUrl || item.mockupUrl;
+          if (imgUrl) {
+            try {
+              const imgRes = await fetch(imgUrl);
+              if (imgRes.ok) {
+                const buf = Buffer.from(await imgRes.arrayBuffer());
+                const ext = imgUrl.includes(".png") ? "png" : "jpg";
+                attachments.push({
+                  filename: `${item.title}_${item.size}.${ext}`,
+                  content: buf,
+                });
+              }
+            } catch {}
+          }
+        }
+      }
+
       await resend.emails.send({
         from: `龍蝦藝術網 <${FROM}>`,
         to,
         subject,
         html,
+        ...(attachments.length > 0 ? { attachments } : {}),
       });
-      console.log(`📧 ${config.name} → ${to}`);
+      console.log(`📧 ${config.name} → ${to}${attachments.length > 0 ? ` (${attachments.length} 附件)` : ""}`);
     } catch (err) {
       console.error(`📧 ${config.name} 寄送失敗:`, err);
     }
