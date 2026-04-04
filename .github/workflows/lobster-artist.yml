@@ -1,0 +1,61 @@
+name: 🦞 龍蝦藝術家
+
+on:
+  # 每天早上 9 點（台灣時間）自動跑
+  schedule:
+    - cron: '0 1 * * *'  # UTC 1:00 = 台灣 9:00
+
+  # 也可以手動觸發
+  workflow_dispatch:
+    inputs:
+      count:
+        description: '生成數量'
+        default: '3'
+      style:
+        description: '風格（留空=隨機）'
+        default: ''
+      price:
+        description: '售價'
+        default: '1280'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🦞 生成圖片並上傳
+        working-directory: lobster-artist
+        env:
+          KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
+          LOBSTER_API_KEY: ${{ secrets.LOBSTER_API_KEY }}
+          LOBSTER_API_URL: https://ls-site-seven.vercel.app/api/products
+        run: |
+          COUNT=${{ github.event.inputs.count || '3' }}
+          STYLE=${{ github.event.inputs.style || '' }}
+          PRICE=${{ github.event.inputs.price || '1280' }}
+
+          ARGS="-n $COUNT"
+          if [ -n "$STYLE" ]; then
+            ARGS="$ARGS -s $STYLE"
+          fi
+          ARGS="$ARGS -p $PRICE"
+
+          echo "🦞 執行: node lobster_upload.js $ARGS"
+          node lobster_upload.js $ARGS
+
+      - name: 保存生成記錄
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobster-output-${{ github.run_number }}
+          path: lobster-artist/lobster_output/
+          retention-days: 7
