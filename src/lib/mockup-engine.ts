@@ -20,17 +20,28 @@ interface TemplateInfo {
 }
 
 async function loadImage(imagePath: string): Promise<Buffer> {
+  // 完整 URL（Blob 或外部）
   if (imagePath.startsWith("http")) {
     const res = await fetch(imagePath);
     if (!res.ok) throw new Error(`Failed to fetch: ${imagePath}`);
     return Buffer.from(await res.arrayBuffer());
   }
+
+  // 以 / 開頭的相對路徑 → 先試本地，失敗則用 fetch 從自己的域名讀
   const fs = await import("fs/promises");
   const path = await import("path");
-  const fullPath = imagePath.startsWith("/")
-    ? path.join(process.cwd(), "public", imagePath)
-    : path.join(process.cwd(), "public", "uploads", imagePath);
-  return fs.readFile(fullPath);
+
+  const localPath = path.join(process.cwd(), "public", imagePath);
+  try {
+    return await fs.readFile(localPath);
+  } catch {
+    // Vercel 上 public 檔案不在 serverless fs，用 HTTP 讀
+    const baseUrl = process.env.NEXTAUTH_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const res = await fetch(`${baseUrl}${imagePath}`);
+    if (!res.ok) throw new Error(`Failed to fetch: ${baseUrl}${imagePath}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
 }
 
 /**
