@@ -19,6 +19,83 @@ interface TemplateInfo {
   printArea: PrintArea;
 }
 
+/**
+ * 判斷模板是深色還是淺色
+ * 根據 slug 名稱判斷（black = 深色）
+ * 也可以用圖片採樣判斷，但 slug 判斷更快
+ */
+function isDarkTemplate(slug: string): boolean {
+  return /black|dark|navy|charcoal/i.test(slug);
+}
+
+/**
+ * 為設計加上對比描邊（外光暈），確保在任何底色上都看得見
+ * 深色模板 → 加白色外光暈
+ * 淺色模板 → 加深色外光暈（輕微，避免破壞美感）
+ */
+async function addContrastOutline(
+  designBuffer: Buffer,
+  dark: boolean
+): Promise<Buffer> {
+  const meta = await sharp(designBuffer).metadata();
+  const w = meta.width!;
+  const h = meta.height!;
+
+  // 建立擴展版的 design（外擴 spread 像素做描邊）
+  const spread = Math.max(3, Math.round(Math.min(w, h) * 0.006)); // 約 0.6% 寬度
+
+  // 描邊顏色
+  const strokeColor = dark
+    ? { r: 255, g: 255, b: 255, alpha: 180 }  // 白色半透明
+    : { r: 40, g: 40, b: 40, alpha: 80 };       // 深灰微透明
+
+  // 用 Sharp 的 extend + blur 做外光暈效果：
+  // 1. 提取 alpha channel
+  const alpha = await sharp(designBuffer)
+    .extractChannel(3)  // alpha channel
+    .toBuffer();
+
+  // 2. 把 alpha 擴展（dilate）作為描邊遮罩
+  const dilatedAlpha = await sharp(alpha)
+    .extend({
+      top: spread, bottom: spread, left: spread, right: spread,
+      background: { r: 0, g: 0, b: 0 },
+    })
+    .blur(spread * 0.8 + 0.5)
+    .threshold(20)
+    .blur(spread * 0.5 + 0.5)
+    .toBuffer();
+
+  // 3. 建立描邊圖層（純色 + dilated alpha）
+  const strokeLayer = await sharp({
+    create: {
+      width: w + spread * 2,
+      height: h + spread * 2,
+      channels: 4,
+      background: strokeColor,
+    },
+  })
+    .composite([{
+      input: await sharp(dilatedAlpha).ensureAlpha().toBuffer(),
+      blend: "dest-in" as const,
+    }])
+    .png()
+    .toBuffer();
+
+  // 4. 把原圖放在描邊上面
+  const result = await sharp(strokeLayer)
+    .composite([{
+      input: designBuffer,
+      left: spread,
+      top: spread,
+      blend: "over" as const,
+    }])
+    .png()
+    .toBuffer();
+
+  return result;
+}
+
 async function loadImage(imagePath: string): Promise<Buffer> {
   if (imagePath.startsWith("http")) {
     const res = await fetch(imagePath);
@@ -91,12 +168,16 @@ export async function composeMockup(
   template: TemplateInfo
 ): Promise<Buffer> {
   const { x, y, width, height } = template.printArea;
+  const dark = isDarkTemplate(template.slug);
 
   // 自動去白背景
   const cleanDesign = await removeWhiteBackground(designBuffer);
 
-  // Resize 到 printArea 大小
-  const resizedDesign = await sharp(cleanDesign)
+  // 加對比描邊（確保在深色/淺色衣服上都看得見）
+  const outlinedDesign = await addContrastOutline(cleanDesign, dark);
+
+  // Resize 到 printArea 大小（描邊後尺寸略大，contain 會自動縮放）
+  const resizedDesign = await sharp(outlinedDesign)
     .resize(width, height, {
       fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -118,6 +199,7 @@ export async function composeMockup(
     .jpeg({ quality: 90 })
     .toBuffer();
 
+  console.log(`  ${dark ? "🌙 深色模板 → 白描邊" : "☀️ 淺色模板 → 輕描邊"}`);
   return mockupBuffer;
 }
 

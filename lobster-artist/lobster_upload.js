@@ -50,16 +50,21 @@ async function aiGenerateDesigns(count, style, existingDesigns = []) {
     existingHint = `\n\n⚠️ 以下設計已經做過了，絕對不要重複類似的主題：\n${titles}\n`;
   }
 
-  const prompt = `你是一個 T-shirt 設計的藝術總監。請為今天生成 ${count} 個獨特的設計方案。
+  const prompt = `你是一個圖案設計師，專門設計可以印在衣服上的獨立圖案。請為今天生成 ${count} 個獨特的設計方案。
 
 ${styleHint}${existingHint}
 ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 要求：
-1. 每個設計要有明確的視覺主題，適合印在衣服上
-2. 構圖集中、白色背景、不要有文字
+1. 每個設計要有明確的視覺主題，是一個可以印在衣服上的獨立圖案
+2. 構圖集中、純白色背景、不要有文字
 3. 結合時下流行元素、季節感、或文化梗
 4. 避免重複常見的主題（不要每次都是錦鯉、龍蝦、富士山）
 5. 要有記憶點，讓人看到會想穿的設計
+
+⚠️ 非常重要 - 關於生圖 prompt：
+- prompt 描述的是一個【孤立的平面圖案】，不是穿在模特身上的衣服
+- 絕對不能出現：t-shirt, clothing, apparel, fabric, model, mannequin, wearing, shirt
+- 圖案要獨立漂浮在白色背景上，就像貼紙或 logo 一樣
 
 回傳純 JSON array，不要 markdown：
 [
@@ -67,7 +72,7 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
     "style": "風格tag",
     "title": "中文商品名（2-6字，有記憶點）",
     "description": "中文設計理念（20-40字）",
-    "prompt": "英文 FLUX prompt（50-80字，描述視覺細節）"
+    "prompt": "英文圖案描述（50-80字，描述圖案本身的視覺細節，不可包含任何衣服或人物）"
   }
 ]`;
 
@@ -101,39 +106,39 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 }
 
 // ===== 內建主題庫（fallback） =====
-const PROMPT_SUFFIX = "centered composition, pure design for apparel print, no text, no logo, no words, white background, highly detailed, 1024x1024";
+const PROMPT_SUFFIX = "isolated graphic design, centered composition, pure white background, no clothing, no t-shirt, no apparel, no fabric, no mannequin, no model, no text, no logo, no words, highly detailed illustration, 1024x1024";
 
 const FALLBACK_THEMES = {
   japanese: [
-    { title: "錦鯉迴旋", desc: "浮世繪風格錦鯉共舞", prompt: "Japanese ukiyo-e style, koi fish swimming in circular formation, traditional woodblock print, vibrant colors" },
-    { title: "武士之魂", desc: "武士揮刀的動態瞬間", prompt: "Japanese ukiyo-e style, samurai warrior with katana in dynamic pose, bold ink outlines" },
-    { title: "雲中龍", desc: "祥龍穿越雲層", prompt: "Japanese ukiyo-e style, dragon soaring among clouds, traditional art" },
-    { title: "櫻吹雪", desc: "櫻花飄落的瞬間之美", prompt: "Japanese ukiyo-e style, cherry blossom branch with petals falling, delicate beauty" },
+    { title: "錦鯉迴旋", desc: "浮世繪風格錦鯉共舞", prompt: "Japanese ukiyo-e style isolated graphic, koi fish swimming in circular formation, traditional woodblock print style, vibrant colors, white background, no clothing" },
+    { title: "武士之魂", desc: "武士揮刀的動態瞬間", prompt: "Japanese ukiyo-e style isolated graphic, samurai warrior silhouette with katana in dynamic pose, bold ink outlines, white background, no clothing" },
+    { title: "雲中龍", desc: "祥龍穿越雲層", prompt: "Japanese ukiyo-e style isolated graphic, dragon soaring among stylized clouds, traditional art, white background, no clothing" },
+    { title: "櫻吹雪", desc: "櫻花飄落的瞬間之美", prompt: "Japanese ukiyo-e style isolated graphic, cherry blossom branch with petals falling, delicate illustration, white background, no clothing" },
   ],
   street: [
-    { title: "骷髏玫瑰", desc: "街頭風骷髏與玫瑰", prompt: "Urban street art, skull with roses and geometric patterns, graffiti style, bold colors" },
-    { title: "霓虹猛虎", desc: "霓虹線條的猛虎", prompt: "Urban street art, wild tiger with neon outlines, spray paint texture, bold graphic" },
-    { title: "塗鴉龍蝦", desc: "街頭塗鴉風格龍蝦", prompt: "Urban street art, lobster warrior graffiti style, bold neon colors, spray paint" },
+    { title: "骷髏玫瑰", desc: "街頭風骷髏與玫瑰", prompt: "Isolated graphic, urban street art style skull with roses and geometric patterns, graffiti illustration, bold colors, white background, no clothing" },
+    { title: "霓虹猛虎", desc: "霓虹線條的猛虎", prompt: "Isolated graphic, wild tiger face with neon outlines, spray paint texture illustration, bold graphic, white background, no clothing" },
+    { title: "塗鴉龍蝦", desc: "街頭塗鴉風格龍蝦", prompt: "Isolated graphic, lobster warrior graffiti illustration style, bold neon colors, urban art, white background, no clothing" },
   ],
   minimal: [
-    { title: "一筆貓", desc: "一筆畫出的貓咪", prompt: "Minimalist line art, cat face portrait with single continuous line, elegant simplicity" },
-    { title: "月下山水", desc: "極簡線條山巒與月", prompt: "Minimalist line art, mountain landscape with crescent moon, single line drawing" },
+    { title: "一筆貓", desc: "一筆畫出的貓咪", prompt: "Isolated graphic, minimalist line art cat face portrait with single continuous line, elegant simplicity, white background, no clothing" },
+    { title: "月下山水", desc: "極簡線條山巒與月", prompt: "Isolated graphic, minimalist line art mountain landscape with crescent moon, single line drawing, white background, no clothing" },
   ],
   illustration: [
-    { title: "星際鯨魚", desc: "星空中悠游的鯨魚", prompt: "Hand-drawn illustration, whale swimming in starry space, whimsical storybook style" },
-    { title: "章魚大廚", desc: "八隻手臂同時料理", prompt: "Hand-drawn illustration, octopus chef cooking with all tentacles, charming character" },
+    { title: "星際鯨魚", desc: "星空中悠游的鯨魚", prompt: "Isolated graphic, hand-drawn illustration of a whale swimming in starry space, whimsical storybook style, white background, no clothing" },
+    { title: "章魚大廚", desc: "八隻手臂同時料理", prompt: "Isolated graphic, hand-drawn illustration of octopus chef cooking with all tentacles, charming character design, white background, no clothing" },
   ],
   retro: [
-    { title: "復古棕櫚", desc: "70年代夕陽棕櫚", prompt: "Retro vintage style, sunset with palm trees silhouette, 70s-80s aesthetic, burnt orange and teal" },
-    { title: "黑膠唱片", desc: "旋轉的黑膠唱片", prompt: "Retro vintage style, vinyl record with music notes, nostalgic color palette" },
+    { title: "復古棕櫚", desc: "70年代夕陽棕櫚", prompt: "Isolated graphic, retro vintage style sunset with palm trees silhouette, 70s-80s aesthetic, burnt orange and teal, white background, no clothing" },
+    { title: "黑膠唱片", desc: "旋轉的黑膠唱片", prompt: "Isolated graphic, retro vintage style vinyl record with music notes, nostalgic color palette, white background, no clothing" },
   ],
   nature: [
-    { title: "蝶之標本", desc: "蝴蝶標本的精緻排列", prompt: "Nature botanical art, butterfly collection display, detailed scientific illustration style" },
-    { title: "蛾與月", desc: "飛蛾與弦月的夜間邂逅", prompt: "Nature art, moth and crescent moon, dark botanical illustration, mystical" },
+    { title: "蝶之標本", desc: "蝴蝶標本的精緻排列", prompt: "Isolated graphic, nature botanical art butterfly collection display, detailed scientific illustration style, white background, no clothing" },
+    { title: "蛾與月", desc: "飛蛾與弦月的夜間邂逅", prompt: "Isolated graphic, moth and crescent moon, dark botanical illustration, mystical design, white background, no clothing" },
   ],
   abstract: [
-    { title: "圓之交響", desc: "重疊的彩色圓形", prompt: "Abstract modern art, overlapping colorful circles, bold composition, contemporary gallery style" },
-    { title: "流體大理石", desc: "液態藝術的凝結瞬間", prompt: "Abstract art, fluid marble texture pattern, swirling colors, modern design" },
+    { title: "圓之交響", desc: "重疊的彩色圓形", prompt: "Isolated graphic, abstract modern art overlapping colorful circles, bold composition, contemporary gallery style, white background, no clothing" },
+    { title: "流體大理石", desc: "液態藝術的凝結瞬間", prompt: "Isolated graphic, abstract fluid marble texture pattern, swirling colors, modern design, white background, no clothing" },
   ],
 };
 
@@ -151,6 +156,31 @@ function getFallbackDesigns(count, style) {
     });
   }
   return designs;
+}
+
+// ===== Prompt 清洗（移除衣服相關詞彙，避免生成 T-shirt mockup）=====
+function sanitizePrompt(prompt) {
+  // 移除「T-shirt design」及各種衣服描述
+  const apparel = [
+    /\bT-shirt design\b/gi,
+    /\bt-shirt\b/gi,
+    /\bshirt design\b/gi,
+    /\bapparel design\b/gi,
+    /\bgarment\b/gi,
+    /\bfeaturing on (?:a |the )?(?:shirt|tee|apparel)\b/gi,
+    /\bprinted on\b/gi,
+    /\bworn by\b/gi,
+    /\bon (?:a |the )?fabric\b/gi,
+  ];
+  let clean = prompt;
+  for (const re of apparel) {
+    clean = clean.replace(re, "isolated graphic art");
+  }
+  // 確保開頭有 isolated graphic
+  if (!/\bisolated graphic\b/i.test(clean)) {
+    clean = "Isolated graphic art: " + clean;
+  }
+  return clean.replace(/\s{2,}/g, " ").trim();
 }
 
 // ===== KIE API =====
@@ -262,7 +292,11 @@ async function main() {
 
   for (let i = 0; i < designs.length; i++) {
     const d = designs[i];
-    const fullPrompt = d.prompt.includes("white background") ? d.prompt : `${d.prompt}, ${PROMPT_SUFFIX}`;
+    const rawPrompt = d.prompt.includes("white background") ? d.prompt : `${d.prompt}, ${PROMPT_SUFFIX}`;
+    const fullPrompt = sanitizePrompt(rawPrompt);
+    if (rawPrompt !== fullPrompt) {
+      console.log(`   🧹 Prompt 清洗: 已移除衣服相關詞彙`);
+    }
 
     console.log(`\n--- [${i + 1}/${designs.length}] ${d.title} (${d.style}) ---`);
     console.log(`   💡 ${d.description}`);
