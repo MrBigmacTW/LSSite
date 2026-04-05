@@ -137,7 +137,7 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 }
 
 // ===== 內建主題庫（fallback） =====
-const PROMPT_SUFFIX = "enamel pin art style, bold clean outlines, flat vivid colors, pure white background, centered composition, no text, no letters, highly detailed, 1024x1024";
+const PROMPT_SUFFIX = "enamel pin art style, bold clean outlines, flat vivid colors, solid pure white background #FFFFFF, sharp clean edges between subject and background, no gradient, no shadow, no glow, no watercolor, no smoke, no fog, centered composition, no text, no letters, highly detailed, 1024x1024";
 
 const FALLBACK_THEMES = {
   japanese: [
