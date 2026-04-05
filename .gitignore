@@ -42,6 +42,9 @@ next-env.d.ts
 
 /src/generated/prisma
 
+# claude code local settings (含指令歷史，可能有密鑰)
+.claude/settings.local.json
+
 # database
 prisma/dev.db
 prisma/dev.db-journal

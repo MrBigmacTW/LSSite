@@ -1,4 +1,5 @@
 import { getProductCount, getTodayProductCount, getPendingProducts } from "@/lib/db";
+import GenerateButton from "./GenerateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,11 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-fg mb-8">儀表板</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-display text-2xl font-semibold text-fg">儀表板</h1>
+        <GenerateButton />
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         {stats.map((stat) => (
           <div key={stat.label} className="bg-bg2 border border-bg3 p-5">
