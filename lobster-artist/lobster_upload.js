@@ -50,22 +50,21 @@ async function aiGenerateDesigns(count, style, existingDesigns = []) {
     existingHint = `\n\n⚠️ 以下設計已經做過了，絕對不要重複類似的主題：\n${titles}\n`;
   }
 
-  const prompt = `你是一個圖案設計師，專門設計可以印在衣服上的獨立圖案。請為今天生成 ${count} 個獨特的設計方案。
+  const prompt = `你是一個徽章與貼紙設計師，專門創作琺瑯徽章（enamel pin）和貼紙圖案。請為今天生成 ${count} 個獨特的設計方案。
 
 ${styleHint}${existingHint}
 ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 要求：
-1. 每個設計要有明確的視覺主題，是一個可以印在衣服上的獨立圖案
-2. 構圖集中、純白色背景、不要有文字
-3. 結合時下流行元素、季節感、或文化梗
-4. 避免重複常見的主題（不要每次都是錦鯉、龍蝦、富士山）
-5. 要有記憶點，讓人看到會想穿的設計
+1. 每個設計的主題清晰，像一枚精緻的琺瑯徽章或貼紙
+2. 構圖集中飽滿、白色背景、絕對不要任何文字或字母
+3. 融合流行元素、季節感或文化梗，有收藏價值
+4. 避免重複（不要每次都是錦鯉、龍蝦、富士山）
+5. 主題可以是：動物、神話生物、自然景物、食物、符號、人物頭像、機械等
 
-⚠️ 非常重要 - 關於生圖 prompt：
-- prompt 描述的是一個【貼紙風格的平面圖案】，風格請寫 "sticker art style" 或 "flat illustration"
-- 絕對不能出現：t-shirt, shirt, clothing, apparel, fabric, model, mannequin, wearing, full body character
-- 絕對不能有 T-shirt 或衣服的輪廓線條作為圖案構圖的一部分
-- 圖案要像貼紙一樣在白色背景上，主體是動物、物件、符號、圖騰等，避免全身人物
+生圖 prompt 規則：
+- 風格固定使用：enamel pin art style, bold outlines, flat colors
+- 描述圖案本身的造型和色彩，不提及任何布料、印刷、服裝用途
+- 人物只描述臉部或半身，不要描述穿著衣服
 
 回傳純 JSON array，不要 markdown：
 [
@@ -73,7 +72,7 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
     "style": "風格tag",
     "title": "中文商品名（2-6字，有記憶點）",
     "description": "中文設計理念（20-40字）",
-    "prompt": "英文圖案描述（50-80字，描述圖案本身的視覺細節，不可包含任何衣服或人物）"
+    "prompt": "英文圖案描述（50-80字）"
   }
 ]`;
 
@@ -107,7 +106,7 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 }
 
 // ===== 內建主題庫（fallback） =====
-const PROMPT_SUFFIX = "sticker art style, flat illustration, pure white background, no t-shirt shape, no shirt outline, no clothing silhouette, no apparel, no fabric, no model, no mannequin, no text, no logo, no words, centered composition, highly detailed, 1024x1024";
+const PROMPT_SUFFIX = "enamel pin art style, bold clean outlines, flat vivid colors, pure white background, centered composition, no text, no letters, highly detailed, 1024x1024";
 
 const FALLBACK_THEMES = {
   japanese: [
@@ -175,11 +174,11 @@ function sanitizePrompt(prompt) {
   ];
   let clean = prompt;
   for (const re of apparel) {
-    clean = clean.replace(re, "sticker illustration");
+    clean = clean.replace(re, "enamel pin");
   }
-  // 確保開頭風格明確（sticker art 比 isolated graphic 更少觸發 T-shirt 輪廓）
-  if (!/\bsticker\b/i.test(clean)) {
-    clean = "Sticker art style illustration: " + clean;
+  // 確保風格前綴正確
+  if (!/\benamel pin\b/i.test(clean)) {
+    clean = "Enamel pin art style: " + clean;
   }
   return clean.replace(/\s{2,}/g, " ").trim();
 }
