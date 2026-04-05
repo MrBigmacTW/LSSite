@@ -35,6 +35,10 @@ jobs:
         with:
           node-version: '20'
 
+      - name: 安裝 Sharp（圖片壓縮）
+        working-directory: lobster-artist
+        run: npm install sharp 2>/dev/null || echo "sharp install skipped"
+
       - name: 🦞 執行
         working-directory: lobster-artist
         env:

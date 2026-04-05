@@ -264,8 +264,25 @@ async function main() {
       const filename = `design_${ts}_${i + 1}.jpg`;
       const filepath = path.join(OUTPUT_DIR, filename);
       const imgRes = await fetch(imageUrl);
-      fs.writeFileSync(filepath, Buffer.from(await imgRes.arrayBuffer()));
-      console.log(`   📥 已下載`);
+      const rawBuffer = Buffer.from(await imgRes.arrayBuffer());
+
+      // 壓縮到 2MB 以下（Vercel 限制 4.5MB）
+      let finalBuffer = rawBuffer;
+      if (rawBuffer.length > 2 * 1024 * 1024) {
+        try {
+          const sharp = require("sharp");
+          finalBuffer = await sharp(rawBuffer)
+            .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+          console.log(`   📐 壓縮: ${Math.round(rawBuffer.length/1024)}KB → ${Math.round(finalBuffer.length/1024)}KB`);
+        } catch {
+          console.log(`   ⚠️ 無法壓縮（sharp 未安裝），用原始大小`);
+        }
+      }
+
+      fs.writeFileSync(filepath, finalBuffer);
+      console.log(`   📥 已下載 (${Math.round(finalBuffer.length/1024)}KB)`);
 
       console.log("   🦞 上傳中...");
       const result = await uploadToLobster(filepath, d.title, d.description, [d.style], price);

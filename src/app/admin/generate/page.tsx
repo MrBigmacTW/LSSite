@@ -90,7 +90,11 @@ export default function GeneratePage() {
       body: JSON.stringify({ count: triggerCount, style: triggerStyle }),
     });
     const data = await res.json();
-    setTriggerResult(data.ok ? data.message : `❌ ${data.error}`);
+    if (data.ok) {
+      setTriggerResult(`✅ ${data.message}\n⏳ GitHub Actions 正在執行，約 3-5 分鐘後到審核區查看`);
+    } else {
+      setTriggerResult(`❌ ${data.error || "觸發失敗"}\n${data.detail || ""}`);
+    }
     setTriggerLoading(false);
   }
 
@@ -122,7 +126,15 @@ export default function GeneratePage() {
             {triggerLoading ? "觸發中..." : "🦞 開始"}
           </button>
         </div>
-        {triggerResult && <p className="mt-2 font-mono text-[12px] text-green-400">{triggerResult}</p>}
+        {triggerResult && (
+          <div className="mt-3 p-3 bg-bg3/50 border border-bg3">
+            {triggerResult.split("\n").map((line, i) => (
+              <p key={i} className={`font-mono text-[12px] ${line.startsWith("✅") ? "text-green-400" : line.startsWith("❌") ? "text-red-400" : "text-fg3"}`}>
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 排程列表 */}
