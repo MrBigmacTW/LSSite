@@ -29,8 +29,36 @@ const LOG_DIR = "./logs";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function randomChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+// ===== 風格設定（從後台 StyleConfig 讀取） =====
+const STYLES_API = process.env.SCHEDULE_API_URL
+  ? process.env.SCHEDULE_API_URL.replace("/api/schedules", "/api/styles")
+  : "https://ls-site-seven.vercel.app/api/styles";
+
+let STYLE_MAP = {}; // { japanese: "Japanese ukiyo-e style...", street: "Urban street art..." }
+const FALLBACK_STYLE_LIST = ["japanese", "street", "minimal", "illustration", "retro", "nature", "abstract"];
+
+async function loadStyles() {
+  try {
+    const res = await fetch(STYLES_API);
+    const data = await res.json();
+    const styles = data.styles || [];
+    for (const s of styles) {
+      if (s.enabled) STYLE_MAP[s.id] = s.promptPrefix || "";
+    }
+    const ids = Object.keys(STYLE_MAP);
+    console.log(`   📎 從後台載入 ${ids.length} 個風格: ${ids.join(", ")}`);
+    return ids;
+  } catch (err) {
+    console.log(`   ⚠️ 無法載入風格設定: ${err.message}，使用內建清單`);
+    return FALLBACK_STYLE_LIST;
+  }
+}
+
+function getStylePrefix(styleId) {
+  return STYLE_MAP[styleId] || "";
+}
+
 // ===== AI 創意大腦 =====
-const STYLE_LIST = ["japanese", "street", "minimal", "illustration", "retro", "nature", "abstract"];
 
 async function aiGenerateDesigns(count, style, existingDesigns = []) {
   if (!OPENROUTER_KEY) {
@@ -38,7 +66,10 @@ async function aiGenerateDesigns(count, style, existingDesigns = []) {
     return null;
   }
 
-  const styleHint = style ? `全部使用 ${style} 風格。` : "每張用不同的風格，從以下選擇：japanese, street, minimal, illustration, retro, nature, abstract。";
+  const availableStyles = Object.keys(STYLE_MAP).length > 0 ? Object.keys(STYLE_MAP) : FALLBACK_STYLE_LIST;
+  const styleHint = style
+    ? `全部使用 ${style} 風格。`
+    : `每張用不同的風格，從以下選擇：${availableStyles.join(", ")}。`;
 
   // 排程的自訂 AI 指示
   const customPrompt = process.env.AI_PROMPT || "";
@@ -266,7 +297,11 @@ async function main() {
   console.log(`   數量: ${count} | 風格: ${style || "隨機"} | AI: ${noAi ? "關閉" : "開啟"}`);
   console.log("============================================");
 
-  // Step 0: 讀取 Notion 已有設計（防重複）
+  // Step 0a: 載入後台風格設定
+  console.log("\n📎 Step 0: 載入風格設定...");
+  const styleList = await loadStyles();
+
+  // Step 0b: 讀取已有設計（防重複）
   console.log("\n📋 Step 0: 讀取 Notion 記錄...");
   const existingDesigns = await getExistingDesigns();
   if (existingDesigns.length > 0) {
@@ -292,14 +327,16 @@ async function main() {
 
   for (let i = 0; i < designs.length; i++) {
     const d = designs[i];
-    const rawPrompt = d.prompt.includes("white background") ? d.prompt : `${d.prompt}, ${PROMPT_SUFFIX}`;
+
+    // 組合 prompt：StyleConfig prefix + AI 生成的描述 + 品質後綴
+    const stylePrefix = getStylePrefix(d.style);
+    const baseParts = [stylePrefix, d.prompt, PROMPT_SUFFIX].filter(Boolean);
+    const rawPrompt = baseParts.join(", ");
     const fullPrompt = sanitizePrompt(rawPrompt);
-    if (rawPrompt !== fullPrompt) {
-      console.log(`   🧹 Prompt 清洗: 已移除衣服相關詞彙`);
-    }
 
     console.log(`\n--- [${i + 1}/${designs.length}] ${d.title} (${d.style}) ---`);
     console.log(`   💡 ${d.description}`);
+    if (stylePrefix) console.log(`   📎 StyleConfig prefix: ${stylePrefix.slice(0, 50)}...`);
 
     try {
       console.log("   📤 KIE Z-Image 生成中...");

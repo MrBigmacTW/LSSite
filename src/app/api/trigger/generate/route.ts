@@ -10,10 +10,11 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { count = 3, style = "", price = 1280, secret } = body as {
+  const { count = 3, style = "", price = 1280, prompt = "", secret } = body as {
     count?: number;
     style?: string;
     price?: number;
+    prompt?: string;
     secret?: string;
   };
 
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
           count: String(count),
           style: style || "",
           price: String(price),
+          prompt: prompt || "",
         },
       }),
     }

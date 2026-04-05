@@ -14,16 +14,10 @@ interface Schedule {
   enabled: number;
 }
 
-const STYLE_OPTIONS = [
-  { value: "japanese", label: "日系插畫" },
-  { value: "street", label: "街頭塗鴉" },
-  { value: "minimal", label: "極簡線條" },
-  { value: "illustration", label: "手繪插畫" },
-  { value: "retro", label: "復古風" },
-  { value: "nature", label: "自然元素" },
-  { value: "abstract", label: "抽象藝術" },
-  { value: "typography", label: "文字設計" },
-];
+interface StyleOption {
+  value: string;
+  label: string;
+}
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -38,6 +32,9 @@ export default function GeneratePage() {
   const [triggerCount, setTriggerCount] = useState(3);
   const [triggerResult, setTriggerResult] = useState("");
   const [triggerLoading, setTriggerLoading] = useState(false);
+  const [confirmingTrigger, setConfirmingTrigger] = useState<string | null>(null);
+  const [scheduleTriggerLoading, setScheduleTriggerLoading] = useState<string | null>(null);
+  const [styleOptions, setStyleOptions] = useState<StyleOption[]>([]);
 
   const loadSchedules = useCallback(async () => {
     const res = await fetch("/api/schedules");
@@ -45,7 +42,16 @@ export default function GeneratePage() {
     setSchedules(data.schedules || []);
   }, []);
 
-  useEffect(() => { loadSchedules(); }, [loadSchedules]);
+  useEffect(() => {
+    loadSchedules();
+    // 從後台載入風格選單
+    fetch("/api/styles").then(r => r.json()).then(data => {
+      const opts = (data.styles || [])
+        .filter((s: { enabled: number }) => s.enabled)
+        .map((s: { id: string; name: string }) => ({ value: s.id, label: s.name }));
+      if (opts.length > 0) setStyleOptions(opts);
+    }).catch(() => {});
+  }, [loadSchedules]);
 
   async function handleAdd() {
     await fetch("/api/schedules", {
@@ -79,6 +85,32 @@ export default function GeneratePage() {
 
   async function handleToggle(id: string, enabled: number) {
     await handleUpdate(id, "enabled", enabled ? 0 : 1);
+  }
+
+  async function handleScheduleTrigger(sch: Schedule) {
+    setScheduleTriggerLoading(sch.id);
+    setConfirmingTrigger(null);
+    try {
+      const res = await fetch("/api/trigger/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          count: sch.count,
+          style: sch.style,
+          price: sch.price,
+          prompt: sch.prompt,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTriggerResult(`✅ 排程「${sch.name}」已觸發！${sch.count} 張 ${sch.style} 風格\n⏳ GitHub Actions 正在執行，約 3-5 分鐘後到審核區查看`);
+      } else {
+        setTriggerResult(`❌ 觸發失敗：${data.error || "未知錯誤"}`);
+      }
+    } catch {
+      setTriggerResult("❌ 網路錯誤，請稍後再試");
+    }
+    setScheduleTriggerLoading(null);
   }
 
   async function handleTrigger() {
@@ -118,7 +150,7 @@ export default function GeneratePage() {
             <select value={triggerStyle} onChange={(e) => setTriggerStyle(e.target.value)}
               className="px-3 py-2 bg-bg border border-bg3 text-fg text-sm">
               <option value="">AI 隨機</option>
-              {STYLE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {styleOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <button onClick={handleTrigger} disabled={triggerLoading}
@@ -170,7 +202,7 @@ export default function GeneratePage() {
                 <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">風格</label>
                 <select value={newSchedule.style} onChange={(e) => setNewSchedule({ ...newSchedule, style: e.target.value })}
                   className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm">
-                  {STYLE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {styleOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
               <div>
@@ -229,7 +261,7 @@ export default function GeneratePage() {
                       <select defaultValue={sch.style}
                         onChange={(e) => handleUpdate(sch.id, "style", e.target.value)}
                         className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm">
-                        {STYLE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        {styleOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </div>
                     <div>
@@ -276,22 +308,43 @@ export default function GeneratePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => handleToggle(sch.id, sch.enabled)}
-                      className={`px-3 py-1 font-mono text-[10px] border transition-colors ${
-                        sch.enabled
-                          ? "border-green-700 text-green-400 hover:bg-green-700/20"
-                          : "border-bg3 text-fg3 hover:border-fg3"
-                      }`}>
-                      {sch.enabled ? "啟用中" : "已停用"}
-                    </button>
-                    <button onClick={() => setEditing(sch.id)}
-                      className="px-3 py-1 font-mono text-[10px] text-fg3 border border-bg3 hover:text-fg2 hover:border-fg3 transition-colors">
-                      編輯
-                    </button>
-                    <button onClick={() => handleDelete(sch.id)}
-                      className="px-3 py-1 font-mono text-[10px] text-red-400/60 border border-bg3 hover:text-red-400 hover:border-red-700 transition-colors">
-                      刪除
-                    </button>
+                    {confirmingTrigger === sch.id ? (
+                      <>
+                        <span className="font-mono text-[10px] text-yellow-400">確定觸發？</span>
+                        <button onClick={() => handleScheduleTrigger(sch)}
+                          disabled={scheduleTriggerLoading === sch.id}
+                          className="px-3 py-1 font-mono text-[10px] text-green-400 border border-green-700 hover:bg-green-700/20 transition-colors">
+                          {scheduleTriggerLoading === sch.id ? "觸發中..." : "確定"}
+                        </button>
+                        <button onClick={() => setConfirmingTrigger(null)}
+                          className="px-3 py-1 font-mono text-[10px] text-fg3 border border-bg3 hover:text-fg2 transition-colors">
+                          取消
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setConfirmingTrigger(sch.id)}
+                          className="px-3 py-1 font-mono text-[10px] text-accent border border-accent/30 hover:bg-accent/10 hover:border-accent transition-colors">
+                          🦞 觸發
+                        </button>
+                        <button onClick={() => handleToggle(sch.id, sch.enabled)}
+                          className={`px-3 py-1 font-mono text-[10px] border transition-colors ${
+                            sch.enabled
+                              ? "border-green-700 text-green-400 hover:bg-green-700/20"
+                              : "border-bg3 text-fg3 hover:border-fg3"
+                          }`}>
+                          {sch.enabled ? "啟用中" : "已停用"}
+                        </button>
+                        <button onClick={() => setEditing(sch.id)}
+                          className="px-3 py-1 font-mono text-[10px] text-fg3 border border-bg3 hover:text-fg2 hover:border-fg3 transition-colors">
+                          編輯
+                        </button>
+                        <button onClick={() => handleDelete(sch.id)}
+                          className="px-3 py-1 font-mono text-[10px] text-red-400/60 border border-bg3 hover:text-red-400 hover:border-red-700 transition-colors">
+                          刪除
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
