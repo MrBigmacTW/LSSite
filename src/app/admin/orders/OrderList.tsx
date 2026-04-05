@@ -35,6 +35,24 @@ export default function OrderList({ orders }: { orders: Order[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [simulating, setSimulating] = useState<string | null>(null);
+
+  async function handleSimulatePay(orderNo: string) {
+    setSimulating(orderNo);
+    const res = await fetch("/api/orders/simulate-pay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNo }),
+    });
+    const data = await res.json();
+    setSimulating(null);
+    if (data.ok) {
+      alert("✅ 模擬付款成功！確認信已寄出，請去信箱確認。");
+      router.refresh();
+    } else {
+      alert(`❌ ${data.error || "操作失敗"}`);
+    }
+  }
 
   async function handleShip(orderNo: string) {
     setProcessing(true);
@@ -140,7 +158,16 @@ export default function OrderList({ orders }: { orders: Order[] }) {
                 )}
 
                 {order.status === "pending" && (
-                  <span className="font-mono text-[12px] text-yellow-400">⏳ 等待付款</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[12px] text-yellow-400">⏳ 等待付款</span>
+                    <button
+                      onClick={() => handleSimulatePay(order.orderNo)}
+                      disabled={simulating === order.orderNo}
+                      className="px-3 py-1.5 border border-yellow-700/50 text-yellow-500 font-mono text-[10px] hover:bg-yellow-700/20 disabled:opacity-50 transition-colors"
+                    >
+                      {simulating === order.orderNo ? "處理中..." : "🧪 模擬付款（測試用）"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
