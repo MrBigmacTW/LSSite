@@ -167,18 +167,24 @@ async function kieCreate(prompt) {
 
 async function kiePoll(taskId) {
   for (let i = 0; i < 60; i++) {
-    const res = await fetch(`${KIE_API_URL}/recordInfo?taskId=${taskId}`, {
-      headers: { "Authorization": `Bearer ${KIE_API_KEY}` },
-    });
-    const data = await res.json();
-    const state = data.data?.state;
-    process.stdout.write(`   ⏳ ${state || "waiting"} (${i + 1}/60)\r`);
-    if (state === "success") {
-      const result = JSON.parse(data.data.resultJson);
-      console.log(`   ✅ 生成完成 (${data.data.costTime}s)      `);
-      return result.resultUrls[0];
+    try {
+      const res = await fetch(`${KIE_API_URL}/recordInfo?taskId=${taskId}`, {
+        headers: { "Authorization": `Bearer ${KIE_API_KEY}` },
+      });
+      const text = await res.text();
+      const data = JSON.parse(text);
+      const state = data.data?.state;
+      process.stdout.write(`   ⏳ ${state || "waiting"} (${i + 1}/60)\r`);
+      if (state === "success") {
+        const result = JSON.parse(data.data.resultJson);
+        console.log(`   ✅ 生成完成 (${data.data.costTime}s)      `);
+        return result.resultUrls[0];
+      }
+      if (state === "failed") throw new Error(data.data.failMsg || "failed");
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("failed")) throw e;
+      console.log(`   ⚠️ polling 異常，重試... (${e})`);
     }
-    if (state === "failed") throw new Error(data.data.failMsg || "failed");
     await sleep(5000);
   }
   throw new Error("Timeout");
@@ -200,7 +206,12 @@ async function uploadToLobster(filepath, title, description, tags, price) {
     headers: { "Authorization": `Bearer ${LOBSTER_TOKEN}` },
     body: form,
   });
-  return res.json();
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`上傳失敗 (HTTP ${res.status}): ${text.slice(0, 200)}`);
+  }
 }
 
 // ===== 主程式 =====
