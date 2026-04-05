@@ -12,8 +12,8 @@ export default function CartPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 px-5 md:px-12 py-12 md:py-20">
-        <h1 className="font-display text-[28px] md:text-[36px] font-bold text-fg mb-8">
+      <main className="flex-1 px-4 md:px-12 py-8 md:py-20">
+        <h1 className="font-display text-[24px] md:text-[36px] font-bold text-fg mb-6 md:mb-8">
           購物車
         </h1>
 
@@ -30,14 +30,14 @@ export default function CartPage() {
         ) : (
           <div className="grid lg:grid-cols-[1fr_360px] gap-8">
             {/* Item list */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {items.map((item) => (
                 <div
                   key={`${item.productId}-${item.size}`}
-                  className="flex gap-4 p-4 bg-bg2 border border-bg3"
+                  className="flex gap-3 p-3 md:p-4 bg-bg2 border border-bg3"
                 >
                   {/* Image */}
-                  <div className="relative w-20 h-20 bg-bg3 flex-shrink-0">
+                  <div className="relative w-[72px] h-[72px] md:w-20 md:h-20 bg-bg3 flex-shrink-0">
                     <Image
                       src={item.mockupUrl}
                       alt={item.title}
@@ -47,58 +47,61 @@ export default function CartPage() {
                     />
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-body text-sm text-fg truncate">{item.title}</h3>
-                    <p className="font-mono text-[11px] text-fg3 mt-1">
-                      尺寸：{item.size}
-                    </p>
-                    <p className="font-mono text-[12px] text-fg2 mt-1">
-                      NT$ {item.price.toLocaleString()}
-                    </p>
-                  </div>
+                  {/* Right: info + controls */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
+                    {/* Top: title + size + unit price */}
+                    <div>
+                      <h3 className="font-body text-sm text-fg leading-snug line-clamp-2">{item.title}</h3>
+                      <p className="font-mono text-[11px] text-fg3 mt-0.5">
+                        尺寸：{item.size}　NT$ {item.price.toLocaleString()}
+                      </p>
+                    </div>
 
-                  {/* Quantity */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity - 1)
-                      }
-                      className="w-8 h-8 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-sm transition-colors"
-                    >
-                      -
-                    </button>
-                    <span className="font-mono text-sm text-fg w-6 text-center">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.size, item.quantity + 1)
-                      }
-                      className="w-8 h-8 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-sm transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
+                    {/* Bottom: qty controls + subtotal + remove */}
+                    <div className="flex items-center justify-between">
+                      {/* Quantity */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() =>
+                            updateQuantity(item.productId, item.size, item.quantity - 1)
+                          }
+                          className="w-7 h-7 md:w-8 md:h-8 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-sm transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono text-sm text-fg w-5 text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() =>
+                            updateQuantity(item.productId, item.size, item.quantity + 1)
+                          }
+                          className="w-7 h-7 md:w-8 md:h-8 border border-bg3 text-fg3 hover:text-fg hover:border-fg3 font-mono text-sm transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
 
-                  {/* Subtotal + remove */}
-                  <div className="flex flex-col items-end justify-between flex-shrink-0">
-                    <span className="font-mono text-[13px] text-fg">
-                      NT$ {(item.price * item.quantity).toLocaleString()}
-                    </span>
-                    <button
-                      onClick={() => removeItem(item.productId, item.size)}
-                      className="font-mono text-[10px] text-fg3 hover:text-red-400 transition-colors uppercase tracking-[1px]"
-                    >
-                      移除
-                    </button>
+                      {/* Subtotal + remove */}
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-[13px] text-fg">
+                          NT$ {(item.price * item.quantity).toLocaleString()}
+                        </span>
+                        <button
+                          onClick={() => removeItem(item.productId, item.size)}
+                          className="font-mono text-[10px] text-fg3 hover:text-red-400 transition-colors uppercase tracking-[1px]"
+                        >
+                          移除
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Summary */}
-            <div className="bg-bg2 border border-bg3 p-6 h-fit sticky top-8">
+            <div className="bg-bg2 border border-bg3 p-4 md:p-6 h-fit lg:sticky lg:top-8">
               <h2 className="font-display text-lg font-semibold text-fg mb-6">訂單摘要</h2>
               <div className="space-y-3 mb-6">
                 {items.map((item) => (

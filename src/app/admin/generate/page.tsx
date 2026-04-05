@@ -184,10 +184,11 @@ export default function GeneratePage() {
           <div className="border border-accent/30 bg-accent/5 p-4 mb-4 space-y-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
-                <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">名稱</label>
+                <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">排程標籤</label>
                 <input value={newSchedule.name} onChange={(e) => setNewSchedule({ ...newSchedule, name: e.target.value })}
-                  placeholder="如：賽博晚班"
+                  placeholder="如：夜間日系、週末街頭"
                   className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm" />
+                <p className="font-mono text-[9px] text-fg3 mt-1">識別這個排程用，不是作品主題</p>
               </div>
               <div>
                 <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">時間（台灣）</label>
@@ -214,10 +215,11 @@ export default function GeneratePage() {
               </div>
             </div>
             <div>
-              <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">AI 指示（告訴 AI 這批設計的方向）</label>
+              <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">靈感關鍵字 <span className="normal-case text-fg3/60">（選填）</span></label>
               <input value={newSchedule.prompt} onChange={(e) => setNewSchedule({ ...newSchedule, prompt: e.target.value })}
-                placeholder="如：賽博龐克風格，霓虹色彩，科幻感，未來主義"
+                placeholder="如：秋季節慶、神話生物、食物系列... 留白 = AI 完全自由發揮"
                 className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm" />
+              <p className="font-mono text-[9px] text-fg3 mt-1">💡 AI 會自動查詢 Google Sheet 已有記錄，確保每次生成全新梗，不會重複</p>
             </div>
             <div className="flex gap-2">
               <button onClick={handleAdd}
@@ -241,9 +243,10 @@ export default function GeneratePage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
-                      <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">名稱</label>
+                      <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">排程標籤</label>
                       <input defaultValue={sch.name}
                         onBlur={(e) => handleUpdate(sch.id, "name", e.target.value)}
+                        placeholder="如：夜間日系、週末街頭"
                         className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm" />
                     </div>
                     <div>
@@ -274,10 +277,12 @@ export default function GeneratePage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">AI 指示</label>
+                    <label className="block font-mono text-[10px] text-fg3 uppercase mb-1">靈感關鍵字 <span className="normal-case text-fg3/60">（選填，留白 = AI 完全自由）</span></label>
                     <input defaultValue={sch.prompt}
                       onBlur={(e) => handleUpdate(sch.id, "prompt", e.target.value)}
+                      placeholder="如：秋季節慶、神話生物、食物系列..."
                       className="w-full px-3 py-2 bg-bg border border-bg3 text-fg text-sm" />
+                    <p className="font-mono text-[9px] text-fg3 mt-1">💡 AI 會自動查詢 Google Sheet 已有記錄，確保每次生成全新梗，不會重複</p>
                   </div>
                   <button onClick={() => setEditing(null)}
                     className="font-mono text-[11px] text-accent hover:text-accent2">
@@ -300,11 +305,12 @@ export default function GeneratePage() {
                         <span className="font-mono text-[10px] text-fg3">{sch.count} 張</span>
                         <span className="font-mono text-[10px] text-fg3">NT${sch.price}</span>
                       </div>
-                      {sch.prompt && (
-                        <p className="font-mono text-[10px] text-fg3 mt-1 truncate max-w-md">
-                          💡 {sch.prompt}
-                        </p>
-                      )}
+                      <p className="font-mono text-[10px] mt-1 truncate max-w-md">
+                        {sch.prompt
+                          ? <span className="text-fg3">💡 {sch.prompt}</span>
+                          : <span className="text-fg3/50 italic">✨ AI 完全自由發揮，自動避開已有作品</span>
+                        }
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

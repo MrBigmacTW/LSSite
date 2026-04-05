@@ -114,14 +114,59 @@ export default function CheckoutPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 px-5 md:px-12 py-12 md:py-20">
-        <h1 className="font-display text-[28px] md:text-[36px] font-bold text-fg mb-8">
+      <main className="flex-1 px-4 md:px-12 py-8 md:py-20 pb-safe">
+        <h1 className="font-display text-[24px] md:text-[36px] font-bold text-fg mb-6 md:mb-8">
           結帳
         </h1>
 
         <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_400px] gap-8">
+          {/* Order summary — shows FIRST on mobile (order-first), right column on desktop */}
+          <div className="order-first lg:order-last bg-bg2 border border-bg3 p-4 md:p-6 h-fit lg:sticky lg:top-8">
+            <h2 className="font-display text-base md:text-lg font-semibold text-fg mb-4">訂單摘要</h2>
+            <div className="space-y-2 mb-4">
+              {items.map((item) => (
+                <div
+                  key={`${item.productId}-${item.size}`}
+                  className="flex justify-between font-mono text-[11px]"
+                >
+                  <span className="text-fg2 truncate mr-4">
+                    {item.title} ({item.size}) x{item.quantity}
+                  </span>
+                  <span className="text-fg flex-shrink-0">
+                    NT$ {(item.price * item.quantity).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-bg3 pt-3 mb-5">
+              <div className="flex justify-between items-baseline">
+                <span className="font-mono text-[13px] text-fg2">總計</span>
+                <span className="font-display text-xl font-bold text-fg">
+                  NT$ {totalAmount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Pay button — visible in summary on desktop, hidden here on mobile */}
+            <div className="hidden lg:block">
+              {error && (
+                <p className="font-mono text-[12px] text-red-400 mb-4">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-accent text-white font-mono text-[12px] uppercase tracking-[2px] hover:bg-accent2 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "處理中..." : "確認付款"}
+              </button>
+              <p className="font-mono text-[10px] text-fg3 mt-4 text-center">
+                付款由藍新金流處理，支援信用卡 / WebATM
+              </p>
+            </div>
+          </div>
+
           {/* Form */}
-          <div className="space-y-5">
+          <div className="order-last lg:order-first space-y-5">
             <h2 className="font-display text-lg font-medium text-fg mb-4">收件資訊</h2>
             {[
               { key: "name", label: "收件人姓名", type: "text", placeholder: "王小明" },
@@ -143,50 +188,23 @@ export default function CheckoutPage() {
                 />
               </div>
             ))}
-          </div>
 
-          {/* Order summary */}
-          <div className="bg-bg2 border border-bg3 p-6 h-fit sticky top-8">
-            <h2 className="font-display text-lg font-semibold text-fg mb-6">訂單摘要</h2>
-            <div className="space-y-3 mb-6">
-              {items.map((item) => (
-                <div
-                  key={`${item.productId}-${item.size}`}
-                  className="flex justify-between font-mono text-[11px]"
-                >
-                  <span className="text-fg2 truncate mr-4">
-                    {item.title} ({item.size}) x{item.quantity}
-                  </span>
-                  <span className="text-fg flex-shrink-0">
-                    NT$ {(item.price * item.quantity).toLocaleString()}
-                  </span>
-                </div>
-              ))}
+            {/* Pay button — only visible on mobile, below the form */}
+            <div className="lg:hidden pt-2">
+              {error && (
+                <p className="font-mono text-[12px] text-red-400 mb-4">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-accent text-white font-mono text-[12px] uppercase tracking-[2px] hover:bg-accent2 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "處理中..." : "確認付款"}
+              </button>
+              <p className="font-mono text-[10px] text-fg3 mt-3 text-center">
+                付款由藍新金流處理，支援信用卡 / WebATM
+              </p>
             </div>
-            <div className="border-t border-bg3 pt-4 mb-6">
-              <div className="flex justify-between">
-                <span className="font-mono text-[13px] text-fg2">總計</span>
-                <span className="font-display text-xl font-bold text-fg">
-                  NT$ {totalAmount.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {error && (
-              <p className="font-mono text-[12px] text-red-400 mb-4">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-accent text-white font-mono text-[12px] uppercase tracking-[2px] hover:bg-accent2 disabled:opacity-50 transition-colors"
-            >
-              {loading ? "處理中..." : "確認付款"}
-            </button>
-
-            <p className="font-mono text-[10px] text-fg3 mt-4 text-center">
-              付款由藍新金流處理，支援信用卡 / WebATM
-            </p>
           </div>
         </form>
       </main>
