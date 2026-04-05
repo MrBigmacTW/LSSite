@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrder, getOrders } from "@/lib/db";
+import { db, createOrder, getOrders } from "@/lib/db";
 import { isConfigured, generatePaymentForm } from "@/lib/newebpay";
 import crypto from "crypto";
 
