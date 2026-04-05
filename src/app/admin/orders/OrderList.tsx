@@ -66,7 +66,7 @@ export default function OrderList({ orders }: { orders: Order[] }) {
     setConfirming(null);
 
     if (data.ok) {
-      alert(`✅ 已標記出貨！確認信已寄送。`);
+      alert(`✅ 已標記出貨。`);
       router.refresh();
     } else {
       alert(`❌ ${data.error || "操作失敗"}`);
@@ -135,7 +135,7 @@ export default function OrderList({ orders }: { orders: Order[] }) {
                 {order.status === "paid" && (
                   confirming === order.id ? (
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[12px] text-yellow-400">確定要標記出貨並寄送通知信？</span>
+                      <span className="font-mono text-[12px] text-yellow-400">確定標記出貨？（不會寄信）</span>
                       <button onClick={() => handleShip(order.orderNo)} disabled={processing}
                         className="px-4 py-2 bg-blue-700 text-white font-mono text-[11px] tracking-[1px] hover:bg-blue-600 disabled:opacity-50">
                         {processing ? "處理中..." : "確認出貨"}
