@@ -1,4 +1,4 @@
-import { getPublishedProducts } from "@/lib/db";
+import { getPublishedProducts, getEnabledStyles } from "@/lib/db";
 import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
@@ -9,7 +9,10 @@ import Footer from "@/components/Footer";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const products = await getPublishedProducts(8);
+  const [products, styles] = await Promise.all([
+    getPublishedProducts(8),
+    getEnabledStyles(),
+  ]);
 
   const galleryItems = products.map((p) => {
     const mockups = JSON.parse((p.mockups as string) || "[]");
@@ -28,7 +31,7 @@ export default async function Home() {
     <>
       <Navbar />
       <HeroSection />
-      <GallerySection items={galleryItems} />
+      <GallerySection items={galleryItems} styles={styles} />
       <AboutSection />
       <Footer />
     </>

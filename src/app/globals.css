@@ -24,6 +24,19 @@
   --animate-slide-up:     slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* ── Light Mode ── */
+:root.light {
+  --color-bg:      #F5F5F5;
+  --color-bg2:     #FFFFFF;
+  --color-bg3:     #E0E0E0;
+  --color-fg:      #1A1A1A;
+  --color-fg2:     #4A4A4A;
+  --color-fg3:     #8A8A8A;
+  --color-accent:  #E8432A;
+  --color-accent2: #FF6B4A;
+  --color-gold:    #B8943E;
+}
+
 /* ── Keyframes ── */
 @keyframes fadeUp {
   0%   { opacity: 0; transform: translateY(20px); }

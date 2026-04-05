@@ -1,4 +1,4 @@
-import { getPublishedProducts } from "@/lib/db";
+import { getPublishedProducts, getEnabledStyles } from "@/lib/db";
 import { imageUrl } from "@/lib/url";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -13,7 +13,10 @@ interface GalleryPageProps {
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const { style } = await searchParams;
 
-  const products = await getPublishedProducts();
+  const [products, styles] = await Promise.all([
+    getPublishedProducts(),
+    getEnabledStyles(),
+  ]);
 
   const items = products.map((p) => {
     const mockups = JSON.parse((p.mockups as string) || "[]");
@@ -39,7 +42,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         <p className="font-mono text-[12px] text-fg3 mb-10 tracking-[1px]">
           {items.length} 件商品
         </p>
-        <GalleryPageContent items={items} initialStyle={style || "all"} />
+        <GalleryPageContent items={items} initialStyle={style || "all"} styles={styles} />
       </main>
       <Footer />
     </>

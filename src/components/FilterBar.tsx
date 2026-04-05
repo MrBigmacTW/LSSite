@@ -1,30 +1,26 @@
 "use client";
 
-const STYLE_FILTERS = [
-  "All",
-  "Japanese",
-  "Street",
-  "Minimal",
-  "Nature",
-  "Retro",
-  "Abstract",
-  "Typography",
-];
-
 interface FilterBarProps {
   active: string;
   onChange: (filter: string) => void;
+  styles?: { id: string; name: string }[];
 }
 
-export default function FilterBar({ active, onChange }: FilterBarProps) {
+export default function FilterBar({ active, onChange, styles }: FilterBarProps) {
+  // "All" 永遠在最前面，其餘從 DB 來
+  const filters = [
+    { id: "all", label: "All" },
+    ...(styles || []).map((s) => ({ id: s.id, label: s.name })),
+  ];
+
   return (
     <div className="flex flex-wrap gap-2">
-      {STYLE_FILTERS.map((filter) => {
-        const isActive = active.toLowerCase() === filter.toLowerCase();
+      {filters.map((f) => {
+        const isActive = active.toLowerCase() === f.id.toLowerCase();
         return (
           <button
-            key={filter}
-            onClick={() => onChange(filter.toLowerCase())}
+            key={f.id}
+            onClick={() => onChange(f.id.toLowerCase())}
             className={`
               px-4 py-2 font-mono text-[11px] uppercase tracking-[1px]
               border transition-all duration-300
@@ -34,7 +30,7 @@ export default function FilterBar({ active, onChange }: FilterBarProps) {
               }
             `}
           >
-            {filter}
+            {f.label}
           </button>
         );
       })}

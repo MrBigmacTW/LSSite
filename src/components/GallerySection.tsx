@@ -7,9 +7,10 @@ import GalleryCard, { type GalleryItem } from "./GalleryCard";
 
 interface GallerySectionProps {
   items: GalleryItem[];
+  styles?: { id: string; name: string }[];
 }
 
-export default function GallerySection({ items }: GallerySectionProps) {
+export default function GallerySection({ items, styles }: GallerySectionProps) {
   const [filter, setFilter] = useState("all");
 
   const filteredItems = useMemo(() => {
@@ -27,18 +28,18 @@ export default function GallerySection({ items }: GallerySectionProps) {
           <span className="font-bold text-fg">Latest </span>
           <span className="font-light text-fg2">drops</span>
         </h2>
-        <FilterBar active={filter} onChange={setFilter} />
+        <FilterBar active={filter} onChange={setFilter} styles={styles} />
       </div>
 
-      {/* Grid */}
+      {/* Masonry Grid */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-16">
           <p className="font-mono text-fg3 text-sm">目前這個風格還沒有商品</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-          {filteredItems.map((item, i) => (
-            <GalleryCard key={item.id} item={item} featured={i === 0 && filteredItems.length >= 4} />
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
+          {filteredItems.map((item) => (
+            <GalleryCard key={item.id} item={item} />
           ))}
         </div>
       )}

@@ -12,32 +12,19 @@ export interface GalleryItem {
   date?: string;
 }
 
-interface GalleryCardProps {
-  item: GalleryItem;
-  featured?: boolean;
-}
-
-export default function GalleryCard({ item, featured }: GalleryCardProps) {
+export default function GalleryCard({ item }: { item: GalleryItem }) {
   return (
     <Link
       href={`/products/${item.id}`}
-      className={`
-        group relative bg-bg2 border border-bg3 overflow-hidden
-        hover:border-fg3 transition-colors duration-400
-        ${featured ? "row-span-2" : ""}
-      `}
-      style={{ aspectRatio: featured ? "3/5" : "3/4" }}
+      className="group relative block bg-bg2 border border-bg3 overflow-hidden hover:border-fg3 transition-colors duration-400 break-inside-avoid mb-4"
     >
-      {/* Image — 用 img 避免 next/image remote pattern 問題 */}
-      <div className="absolute inset-0">
-        <img
-          src={item.thumbnailUrl}
-          alt={item.title}
-          className="w-full h-full object-contain transition-transform duration-600 group-hover:scale-[1.03]"
-          style={{ background: "#161616" }}
-          loading="lazy"
-        />
-      </div>
+      {/* Image — 自然高度 */}
+      <img
+        src={item.thumbnailUrl}
+        alt={item.title}
+        className="w-full h-auto block transition-transform duration-600 group-hover:scale-[1.03]"
+        loading="lazy"
+      />
 
       {/* Tag badge — top left */}
       {item.tags[0] && (

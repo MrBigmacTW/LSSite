@@ -26,6 +26,12 @@ function rowToObj(row: Row, columns: string[]): Record<string, unknown> {
   return obj;
 }
 
+// ── Style queries ──
+export async function getEnabledStyles(): Promise<{ id: string; name: string }[]> {
+  const result = await db.execute("SELECT id, name FROM StyleConfig WHERE enabled = 1 ORDER BY sortOrder ASC");
+  return result.rows.map((r) => ({ id: String(r.id), name: String(r.name) }));
+}
+
 // ── Product queries ──
 export async function getPublishedProducts(limit?: number) {
   const sql = limit
