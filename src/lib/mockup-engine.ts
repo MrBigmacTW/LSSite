@@ -174,7 +174,18 @@ export async function composeMockup(
   const cleanDesign = await removeWhiteBackground(designBuffer);
 
   // 加對比描邊（確保在深色/淺色衣服上都看得見）
-  const outlinedDesign = await addContrastOutline(cleanDesign, dark);
+  let outlinedDesign = cleanDesign;
+  try {
+    const meta = await sharp(cleanDesign).metadata();
+    if (meta.channels === 4) {
+      outlinedDesign = await addContrastOutline(cleanDesign, dark);
+      console.log(`  ${dark ? "🌙 深色模板 → 白描邊" : "☀️ 淺色模板 → 輕描邊"}`);
+    } else {
+      console.log(`  ⚠️ 設計圖無 alpha channel (${meta.channels}ch)，跳過描邊`);
+    }
+  } catch (err) {
+    console.error("  ⚠️ 描邊失敗，使用原圖:", err);
+  }
 
   // Resize 到 printArea 大小（描邊後尺寸略大，contain 會自動縮放）
   const resizedDesign = await sharp(outlinedDesign)
@@ -199,7 +210,6 @@ export async function composeMockup(
     .jpeg({ quality: 90 })
     .toBuffer();
 
-  console.log(`  ${dark ? "🌙 深色模板 → 白描邊" : "☀️ 淺色模板 → 輕描邊"}`);
   return mockupBuffer;
 }
 
