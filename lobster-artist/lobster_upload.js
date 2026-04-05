@@ -17,10 +17,10 @@ const path = require("path");
 const { getExistingDesigns, addDesignRecord } = require("./gsheet");
 
 // ===== 設定 =====
-const KIE_API_KEY = process.env.KIE_API_KEY || "";
+const KIE_API_KEY = process.env.KIE_API_KEY || (() => { throw new Error("請設定 KIE_API_KEY"); })();
 const KIE_API_URL = "https://api.kie.ai/api/v1/jobs";
 const LOBSTER_API_URL = process.env.LOBSTER_API_URL || "https://ls-site-seven.vercel.app/api/products";
-const LOBSTER_TOKEN = process.env.LOBSTER_API_KEY || "";
+const LOBSTER_TOKEN = process.env.LOBSTER_API_KEY || (() => { throw new Error("請設定 LOBSTER_API_KEY"); })();
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 const OUTPUT_DIR = "./lobster_output";
 const LOG_DIR = "./logs";

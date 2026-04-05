@@ -46,7 +46,7 @@ async function getExistingDesigns() {
  * 新增一筆設計記錄到 Sheet（用 Google Apps Script Web App 或直接 append）
  */
 async function addDesignRecord(design) {
-  const WEBHOOK_URL = process.env.GOOGLE_SHEET_WEBHOOK || "https://script.google.com/macros/s/AKfycbzwOBQE7RTRyFhvpVueoM7S4yrOk6FXUYcNM5WNfByaeAKfqAj28GC4mLObrsT57LxpQA/exec";
+  const WEBHOOK_URL = process.env.GOOGLE_SHEET_WEBHOOK || "";
 
   try {
     const res = await fetch(WEBHOOK_URL, {

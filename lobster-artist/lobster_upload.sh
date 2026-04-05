@@ -14,10 +14,10 @@
 set -euo pipefail
 
 # ===== 設定（環境變數優先，否則用預設值）=====
-KIE_API_KEY="${KIE_API_KEY:-73ed980107cc4400bdb5a0a62a98dfdd}"
+KIE_API_KEY="${KIE_API_KEY:?請設定 KIE_API_KEY 環境變數}"
 KIE_API_URL="https://api.kie.ai/api/v1/jobs"
 LOBSTER_API_URL="${LOBSTER_API_URL:-https://ls-site-seven.vercel.app/api/products}"
-LOBSTER_TOKEN="${LOBSTER_API_KEY:-lob_a53fc24de4fb941cc7305712111eecbb35670c3cc9f24343}"
+LOBSTER_TOKEN="${LOBSTER_API_KEY:?請設定 LOBSTER_API_KEY 環境變數}"
 OUTPUT_DIR="./lobster_output"
 LOG_DIR="./logs"
 
