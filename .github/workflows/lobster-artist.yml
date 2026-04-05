@@ -46,6 +46,7 @@ jobs:
           LOBSTER_API_KEY: ${{ secrets.LOBSTER_API_KEY }}
           LOBSTER_API_URL: https://ls-site-seven.vercel.app/api/products
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GOOGLE_SHEET_WEBHOOK: ${{ secrets.GOOGLE_SHEET_WEBHOOK }}
           SCHEDULE_API_URL: https://ls-site-seven.vercel.app/api/schedules
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
