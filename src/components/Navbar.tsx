@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
-import ThemeToggle from "./ThemeToggle";
 
 const NAV_LINKS = [
   { href: "/gallery", label: "Gallery" },
@@ -46,12 +45,10 @@ export default function Navbar() {
             </span>
           )}
         </Link>
-        <ThemeToggle />
       </div>
 
       {/* Mobile hamburger */}
-      <div className="flex items-center gap-3 md:hidden">
-        <ThemeToggle />
+      <div className="flex items-center gap-4 md:hidden">
         <Link href="/cart" className="relative p-2">
           <span className="font-mono text-[12px] text-fg3">Cart</span>
           {totalItems > 0 && (
