@@ -3,7 +3,7 @@
 @import "tailwindcss";
 
 /* ── Tailwind v4 Theme ── */
-@theme inline {
+@theme {
   --color-bg:      #0A0A0A;
   --color-bg2:     #111111;
   --color-bg3:     #1A1A1A;
