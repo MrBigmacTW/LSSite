@@ -21,10 +21,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "購物車是空的" }, { status: 400 });
   }
 
-  const totalAmount = items.reduce(
-    (sum: number, i: { price: number; quantity: number }) => sum + i.price * i.quantity,
-    0
-  );
+  // 從 DB 查詢真實價格，防止前端竄改
+  let totalAmount = 0;
+  for (const item of items) {
+    const product = await db.execute({ sql: "SELECT price FROM Product WHERE id = ?", args: [item.productId] });
+    const realPrice = product.rows.length > 0 ? (product.rows[0].price as number) : item.price;
+    item.price = realPrice; // 用 DB 的價格覆蓋前端傳來的
+    totalAmount += realPrice * item.quantity;
+  }
   // 藍新訂單編號限制：20 字元以內，英數字
   const orderNo = generateOrderNo();
   const orderId = crypto.randomUUID();

@@ -23,8 +23,22 @@ export async function POST(req: NextRequest) {
     const { Status, Result } = data;
 
     if (Status === "SUCCESS") {
-      const { MerchantOrderNo, TradeNo, PaymentType } = Result;
+      const { MerchantOrderNo, TradeNo, PaymentType, Amt } = Result;
       const now = new Date().toISOString();
+
+      // 驗證付款金額是否正確
+      const orderCheck = await db.execute({
+        sql: `SELECT totalAmount FROM "Order" WHERE orderNo = ?`,
+        args: [MerchantOrderNo],
+      });
+
+      if (orderCheck.rows.length > 0) {
+        const expectedAmount = orderCheck.rows[0].totalAmount as number;
+        if (Number(Amt) !== expectedAmount) {
+          console.error(`⚠️ 金額不符！訂單 ${MerchantOrderNo}: 預期 ${expectedAmount}, 實際 ${Amt}`);
+          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+        }
+      }
 
       // 更新訂單狀態
       await db.execute({
