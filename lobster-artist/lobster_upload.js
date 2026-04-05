@@ -62,9 +62,10 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 5. 要有記憶點，讓人看到會想穿的設計
 
 ⚠️ 非常重要 - 關於生圖 prompt：
-- prompt 描述的是一個【孤立的平面圖案】，不是穿在模特身上的衣服
-- 絕對不能出現：t-shirt, clothing, apparel, fabric, model, mannequin, wearing, shirt
-- 圖案要獨立漂浮在白色背景上，就像貼紙或 logo 一樣
+- prompt 描述的是一個【貼紙風格的平面圖案】，風格請寫 "sticker art style" 或 "flat illustration"
+- 絕對不能出現：t-shirt, shirt, clothing, apparel, fabric, model, mannequin, wearing, full body character
+- 絕對不能有 T-shirt 或衣服的輪廓線條作為圖案構圖的一部分
+- 圖案要像貼紙一樣在白色背景上，主體是動物、物件、符號、圖騰等，避免全身人物
 
 回傳純 JSON array，不要 markdown：
 [
@@ -106,7 +107,7 @@ ${customPrompt ? `\n特別指示：${customPrompt}\n` : ""}
 }
 
 // ===== 內建主題庫（fallback） =====
-const PROMPT_SUFFIX = "isolated graphic design, centered composition, pure white background, no clothing, no t-shirt, no apparel, no fabric, no mannequin, no model, no text, no logo, no words, highly detailed illustration, 1024x1024";
+const PROMPT_SUFFIX = "sticker art style, flat illustration, pure white background, no t-shirt shape, no shirt outline, no clothing silhouette, no apparel, no fabric, no model, no mannequin, no text, no logo, no words, centered composition, highly detailed, 1024x1024";
 
 const FALLBACK_THEMES = {
   japanese: [
@@ -174,11 +175,11 @@ function sanitizePrompt(prompt) {
   ];
   let clean = prompt;
   for (const re of apparel) {
-    clean = clean.replace(re, "isolated graphic art");
+    clean = clean.replace(re, "sticker illustration");
   }
-  // 確保開頭有 isolated graphic
-  if (!/\bisolated graphic\b/i.test(clean)) {
-    clean = "Isolated graphic art: " + clean;
+  // 確保開頭風格明確（sticker art 比 isolated graphic 更少觸發 T-shirt 輪廓）
+  if (!/\bsticker\b/i.test(clean)) {
+    clean = "Sticker art style illustration: " + clean;
   }
   return clean.replace(/\s{2,}/g, " ").trim();
 }
