@@ -82,3 +82,18 @@ model MockupTemplate {
   active    Boolean @default(true)
   sortOrder Int     @default(0)
 }
+
+model ImageVariant {
+  id          String   @id @default(cuid())
+  sourceType  String   // "product" | "logo"
+  sourceId    String   // Product.id or logo file id
+  variantType String   // "original" | "negate" | "warm" | "cool" | "grayscale" | "vintage" | "sketch" | "pixelate" | "oilpaint" | "halftone" | "emboss"
+  url         String   // Vercel Blob URL or /uploads/... path
+  width       Int?
+  height      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sourceType, sourceId, variantType])
+  @@index([sourceType, sourceId])
+}
