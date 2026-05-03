@@ -1,38 +1,13 @@
+import "server-only";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { nanoid } from "nanoid";
+import { VARIANT_TYPES } from "./colorVariantTypes";
+import type { VariantType } from "./colorVariantTypes";
 
-// ── 11 variant types ──
-export const VARIANT_TYPES = [
-  "original",
-  "negate",
-  "warm",
-  "cool",
-  "grayscale",
-  "vintage",
-  "sketch",
-  "pixelate",
-  "oilpaint",
-  "halftone",
-  "emboss",
-] as const;
-
-export type VariantType = (typeof VARIANT_TYPES)[number];
-
-export const VARIANT_LABELS: Record<VariantType, string> = {
-  original:  "原色",
-  negate:    "底片反色",
-  warm:      "暖色調",
-  cool:      "冷色調",
-  grayscale: "灰階",
-  vintage:   "復古棕",
-  sketch:    "速寫線稿",
-  pixelate:  "像素風",
-  oilpaint:  "油畫質感",
-  halftone:  "半調網點",
-  emboss:    "浮雕壓紋",
-};
+// Re-export for server-side callers that import everything from here
+export { VARIANT_TYPES, VARIANT_LABELS, type VariantType } from "./colorVariantTypes";
 
 // ── Per-variant Sharp transforms ──
 async function applyVariant(buffer: Buffer, type: VariantType): Promise<Buffer> {

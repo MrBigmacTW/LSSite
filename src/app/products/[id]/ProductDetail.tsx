@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import MockupViewer from "@/components/MockupViewer";
 import AddToCartButton from "@/components/AddToCartButton";
 import VariantSelector, { type VariantItem } from "@/components/VariantSelector";
-import { type VariantType } from "@/lib/services/colorVariantService";
+import { type VariantType } from "@/lib/services/colorVariantTypes";
 
 interface MockupItem {
   label: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { VARIANT_LABELS, VARIANT_TYPES, type VariantType } from "@/lib/services/colorVariantService";
+import { VARIANT_LABELS, VARIANT_TYPES, type VariantType } from "@/lib/services/colorVariantTypes";
 
 export interface VariantItem {
   variantType: VariantType;

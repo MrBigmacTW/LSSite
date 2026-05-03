@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { VARIANT_LABELS, VARIANT_TYPES, type VariantType } from "@/lib/services/colorVariantService";
+import { VARIANT_LABELS, VARIANT_TYPES, type VariantType } from "@/lib/services/colorVariantTypes";
 
 interface VariantResult {
   variantType: string;
