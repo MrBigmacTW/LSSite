@@ -2,68 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { IntakeAnswers } from "./IntakeForm";
+import type { Msg } from "@/lib/poc/chatSeed";
 
 interface Props {
   accessKey: string;
   intake: IntakeAnswers;
+  /** 對話歷史（受控）— 由 StudioClient 持有，這樣「重新對話」回 chat 才不會被重置 */
+  messages: Msg[];
+  setMessages: React.Dispatch<React.SetStateAction<Msg[]>>;
   onImagesReady: (urls: string[]) => void;
-}
-
-interface Msg {
-  role: "user" | "assistant";
-  content: string;
+  /** 「從頭開始」— 回 landing + 清掉所有狀態 */
+  onResetAll: () => void;
 }
 
 type Phase = "chatting" | "generating" | "error";
 
+// 10 = 客戶實際可發言 10 次（不含 intake seed 那一則）
 const MAX_TURNS = 10;
 
-/**
- * 把 intake 答案組成「seed user message」放到對話開頭，讓 AI 知道客戶已選擇了什麼
- */
-function buildSeedMessage(intake: IntakeAnswers): string {
-  const parts: string[] = [
-    `想印在：${intake.shirtColorLabel}`,
-    `用途：${humanizePurpose(intake.purpose)}`,
-    `風格：${intake.style}`,
-    `配色：${intake.colorPalette}`,
-  ];
-  if (intake.hasText === "yes" && intake.textContent) {
-    parts.push(`要加文字：「${intake.textContent}」`);
-  } else {
-    parts.push("不加文字，純圖案");
-  }
-  return parts.map((p) => `- ${p}`).join("\n");
-}
-
-function humanizePurpose(value: string): string {
-  // value 是英文（送給 AI 用），這裡轉中文顯示給人看
-  const map: Record<string, string> = {
-    "for personal wear": "自己穿",
-    "as a gift": "送禮",
-    "for a special occasion or memorial": "紀念日 / 特殊場合",
-    "to commemorate a beloved pet": "紀念毛小孩",
-    "for a group or event": "團體 / 活動",
-  };
-  return map[value] || value;
-}
-
-function buildOpening(intake: IntakeAnswers): string {
-  const hasText =
-    intake.hasText === "yes" && intake.textContent
-      ? `，會加上「${intake.textContent}」這個文字`
-      : "";
-  return `了解！你想要一件${intake.shirtColorLabel}的設計，看起來會是個很棒的方向${hasText} ✨\n\n再請教你一個關鍵問題：**設計的主題（main subject）想要什麼？**\n例如：一隻動物、一個人物、抽象元素、植物、食物、星空... 越具體越好。`;
-}
-
-export default function ChatInterface({ accessKey, intake, onImagesReady }: Props) {
-  // 第一輪：seed user 訊息（intake 答案）+ AI 開場白
-  const seedUser = buildSeedMessage(intake);
-  const opening = buildOpening(intake);
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "user", content: seedUser },
-    { role: "assistant", content: opening },
-  ]);
+export default function ChatInterface({
+  accessKey,
+  intake,
+  messages,
+  setMessages,
+  onImagesReady,
+  onResetAll,
+}: Props) {
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<Phase>("chatting");
   const [streamingText, setStreamingText] = useState("");
@@ -72,8 +36,11 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
   const [preparing, setPreparing] = useState(false);  // tool_call_starting → 顯示 inline 進度條
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const userTurns = messages.filter((m) => m.role === "user").length;
-  const isLocked = userTurns >= MAX_TURNS || generationCalled || phase !== "chatting";
+  // 真實對話輪次 = 全部 user role 訊息 - 1（扣掉 intake seed）
+  const realUserTurns = Math.max(0, messages.filter((m) => m.role === "user").length - 1);
+  const turnsLeft = MAX_TURNS - realUserTurns;
+  const reachedMax = turnsLeft <= 0;
+  const isLocked = reachedMax || generationCalled || phase !== "chatting";
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -227,44 +194,73 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
       </div>
 
       <div className="border-t border-fg3/20 pt-4">
-        {/* 紅色強制生圖按鈕：用戶聊過至少 2 輪後出現，給 AI 卡住時的逃生口 */}
-        {userTurns >= 2 && !isLocked && (
-          <button
-            onClick={() => send("[GENERATE_NOW] 不囉嗦了，就用現在的資訊直接生圖！")}
-            className="w-full mb-3 py-3 bg-gradient-to-r from-accent to-accent2 text-bg font-mono font-bold rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
-          >
-            <span>🚀</span>
-            <span>不囉嗦了，直接生圖</span>
-            <span className="text-xs opacity-70">(跳過剩餘對話)</span>
-          </button>
-        )}
+        {reachedMax ? (
+          // ── 對話額度用完：跳明顯提示 ──
+          <div className="bg-accent/10 border border-accent/40 rounded-xl p-5 text-center">
+            <div className="text-2xl mb-2">🛑</div>
+            <h3 className="font-display font-bold text-lg text-fg mb-1">
+              已達 {MAX_TURNS} 輪對話上限
+            </h3>
+            <p className="text-fg2 text-sm mb-4">
+              要從頭再來、還是用現在的資訊直接生圖？
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={onResetAll}
+                className="flex-1 px-5 py-3 bg-bg3 border border-fg3/40 text-fg font-mono font-medium rounded-lg hover:border-accent transition"
+              >
+                ↻ 從頭開始（回問卷）
+              </button>
+              <button
+                onClick={() => send("[GENERATE_NOW] 用現在的資訊直接生圖")}
+                className="flex-1 px-5 py-3 bg-gradient-to-r from-accent to-accent2 text-bg font-mono font-bold rounded-lg hover:opacity-90 transition"
+              >
+                🚀 直接生圖
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* 紅色強制生圖按鈕：用戶聊過至少 2 輪後出現，給 AI 卡住時的逃生口 */}
+            {realUserTurns >= 2 && !isLocked && (
+              <button
+                onClick={() => send("[GENERATE_NOW] 不囉嗦了，就用現在的資訊直接生圖！")}
+                className="w-full mb-3 py-3 bg-gradient-to-r from-accent to-accent2 text-bg font-mono font-bold rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
+              >
+                <span>🚀</span>
+                <span>不囉嗦了，直接生圖</span>
+                <span className="text-xs opacity-70">(跳過剩餘對話)</span>
+              </button>
+            )}
 
-        <div className="flex gap-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            disabled={isLocked}
-            placeholder={isLocked ? "對話已結束" : "說說你想要的設計..."}
-            className="flex-1 bg-bg2 border border-fg3/30 rounded-lg px-4 py-3 text-fg placeholder:text-fg3 resize-none focus:outline-none focus:border-accent transition disabled:opacity-50"
-            rows={2}
-          />
-          <button
-            onClick={() => send()}
-            disabled={!input.trim() || isLocked}
-            className="px-6 py-3 bg-bg3 border border-fg3/40 text-fg font-mono font-medium rounded-lg hover:border-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            送出
-          </button>
-        </div>
-        <p className="text-xs text-fg3 font-mono mt-2 text-right">
-          {userTurns}/{MAX_TURNS} 輪
-        </p>
+            <div className="flex gap-3">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+                disabled={isLocked}
+                placeholder={isLocked ? "對話已結束" : "說說你想要的設計..."}
+                className="flex-1 bg-bg2 border border-fg3/30 rounded-lg px-4 py-3 text-fg placeholder:text-fg3 resize-none focus:outline-none focus:border-accent transition disabled:opacity-50"
+                rows={2}
+              />
+              <button
+                onClick={() => send()}
+                disabled={!input.trim() || isLocked}
+                className="px-6 py-3 bg-bg3 border border-fg3/40 text-fg font-mono font-medium rounded-lg hover:border-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                送出
+              </button>
+            </div>
+            <p className="text-xs text-fg3 font-mono mt-2 text-right">
+              {realUserTurns}/{MAX_TURNS} 輪
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
