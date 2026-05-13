@@ -61,6 +61,8 @@ function userSaidGo(text: string): boolean {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Vercel Hobby plan 最高 60s。KIE 輪詢加上對話 streaming 可能逼近上限。
+export const maxDuration = 60;
 
 interface SsePayload {
   type:
