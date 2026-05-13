@@ -13,7 +13,12 @@
 
 import { NextRequest } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
-import { streamChat, type ChatMessage } from "@/lib/poc/gemini";
+import {
+  streamChat,
+  forceToolCall,
+  looksLikeSummary,
+  type ChatMessage,
+} from "@/lib/poc/gemini";
 import { generateMany } from "@/lib/poc/zimage";
 import { buildZImagePrompt, type DesignParams } from "@/lib/poc/promptProcessor";
 import { consumeGenerationQuota, DailyLimitExceededError } from "@/lib/poc/globalLimit";
@@ -72,6 +77,8 @@ export async function POST(req: NextRequest) {
         let toolCallName: string | null = null;
         let toolCallArgs = "";
         let toolCallStartEmitted = false;
+        // 累積 assistant 文字（用於偵測「沒拿到 tool_call 但 AI 在 summary」的情境）
+        let assistantText = "";
 
         outer: while (true) {
           const { value, done } = await reader.read();
@@ -97,6 +104,7 @@ export async function POST(req: NextRequest) {
               // ── token ──
               if (typeof delta.content === "string" && delta.content.length > 0) {
                 send({ type: "token", data: delta.content });
+                assistantText += delta.content;
               }
 
               // ── tool call（OpenAI / OpenRouter 格式，分塊累積） ──
@@ -117,6 +125,30 @@ export async function POST(req: NextRequest) {
             } catch {
               // 忽略 parse 錯誤行
             }
+          }
+        }
+
+        // ── 2.5 沒拿到 tool_call？做 fallback：偵測 summary 字樣 → 非串流強制 tool_choice ──
+        // 已知問題：Gemini + OpenRouter + streaming 組合下，tool_call delta 有時不會吐出
+        // 解法：當 AI 文字看起來像 summary 但沒收到 tool_call，重打一次 non-streaming + 強制 tool_choice
+        if (
+          (!toolCallName || !toolCallArgs) &&
+          looksLikeSummary(assistantText) &&
+          messages.length >= 4 // 至少有 2 輪對話避免太早觸發
+        ) {
+          // 包含目前這輪 assistant 文字進歷史，讓 forceToolCall 有完整 context
+          const forcedHistory: ChatMessage[] = [
+            ...messages,
+            { role: "assistant", content: assistantText },
+          ];
+          if (!toolCallStartEmitted) {
+            send({ type: "tool_call_starting" });
+            toolCallStartEmitted = true;
+          }
+          const forced = await forceToolCall(forcedHistory);
+          if (forced) {
+            toolCallName = "generate_design_images";
+            toolCallArgs = JSON.stringify(forced);
           }
         }
 

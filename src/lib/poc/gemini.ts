@@ -108,6 +108,87 @@ async function callOpenRouter(model: string, messages: ChatMessage[]): Promise<R
 }
 
 /**
+ * 非串流補打一次，強制 tool_choice 指定到 generate_design_images。
+ * 用途：Gemini + OpenRouter + streaming 組合下 tool_calls 有時不會
+ * 從 SSE 吐出，但非串流模式下穩定。當主流程偵測到 summary 字樣卻
+ * 沒拿到 tool_call 時呼叫此 fallback。
+ *
+ * 回傳：parsed function arguments（純物件），或 null（仍失敗）
+ */
+export async function forceToolCall(
+  messages: ChatMessage[]
+): Promise<Record<string, string> | null> {
+  if (!OPENROUTER_KEY) return null;
+
+  for (const model of MODEL_FALLBACK_CHAIN) {
+    try {
+      const body = {
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages,
+        ],
+        tools: [GENERATE_DESIGN_TOOL],
+        tool_choice: {
+          type: "function",
+          function: { name: "generate_design_images" },
+        },
+        temperature: 0.3,
+        max_tokens: 400,
+        stream: false,
+      };
+
+      const res = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        console.warn(`[poc/chat] forceToolCall ${model} → ${res.status}`);
+        continue;
+      }
+
+      const json = await res.json();
+      const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
+      const argStr = toolCall?.function?.arguments;
+      if (!argStr) {
+        console.warn(`[poc/chat] forceToolCall ${model}: no tool_call in response`);
+        continue;
+      }
+
+      console.log(`[poc/chat] forceToolCall success via ${model}`);
+      return JSON.parse(argStr);
+    } catch (e) {
+      console.warn(`[poc/chat] forceToolCall ${model} threw:`, e);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 判斷 assistant 的回覆是否「看起來像 summary / 即將生圖」。
+ * 用於主流程沒拿到 tool_call 時，決定要不要 forceToolCall。
+ */
+export function looksLikeSummary(text: string): boolean {
+  const triggers = [
+    "幫你做",
+    "幫妳做",
+    "馬上開始",
+    "讓我來畫",
+    "讓我畫",
+    "現在就",
+    "馬上幫你",
+    "馬上幫妳",
+  ];
+  return triggers.some((t) => text.includes(t));
+}
+
+/**
  * 開啟 streaming chat completion。回傳 raw Response — 呼叫端負責讀 SSE body。
  *
  * 自動 fallback：主模型遇 429 / 5xx 時切到下一個模型重試。
