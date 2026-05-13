@@ -24,29 +24,39 @@ import { buildZImagePrompt, type DesignParams } from "@/lib/poc/promptProcessor"
 import { consumeGenerationQuota, DailyLimitExceededError } from "@/lib/poc/globalLimit";
 
 // 客戶是否說出「開始生圖」的明確信號
-const GO_SIGNALS = [
-  "做吧",
-  "畫吧",
-  "開始",
-  "就這樣",
-  "可以了",
-  "好了，畫",
-  "好了畫",
-  "快點",
-  "go",
-  "start",
-  "ready",
-  "畫看看",
-  "幫我做",
-  "幫我畫",
-  "ok 開始",
-  "OK 開始",
+// 含「片段觸發詞」與「短肯定詞」兩類
+const GO_PHRASES = [
+  "做吧", "畫吧", "開始", "就這樣", "可以了",
+  "好了畫", "好了，畫", "快點",
+  "go", "start", "ready", "ok 開始",
+  "畫看看", "幫我做", "幫我畫",
+  "生圖", "出圖", "去畫", "直接畫", "直接生",
 ];
+
+// 短肯定詞：客戶整句剛好只有這幾個字（或加標點）→ 視為 go
+const SHORT_AFFIRMATIVES = new Set([
+  "好", "好的", "好啊", "好喔", "好哇", "好呀", "好啦",
+  "嗯", "嗯嗯", "嗯哼", "ok", "OK", "Ok", "okay", "yep", "yes",
+  "對", "對的", "是", "是的", "沒問題", "沒錯",
+  "🆗", "👌", "👍",
+]);
+
+// 系統內部觸發：前端透過此特殊字串直接強制生圖
+const FORCE_GENERATE_TOKEN = "[GENERATE_NOW]";
 
 function userSaidGo(text: string): boolean {
   if (!text) return false;
-  const lower = text.toLowerCase().trim();
-  return GO_SIGNALS.some((sig) => lower.includes(sig.toLowerCase()));
+  const raw = text.trim();
+  if (!raw) return false;
+  if (raw.includes(FORCE_GENERATE_TOKEN)) return true;
+  // 整句剛好是短肯定詞（去標點）
+  const stripped = raw.replace(/[\s。，！？.!?,~～·]/g, "");
+  if (SHORT_AFFIRMATIVES.has(stripped) || SHORT_AFFIRMATIVES.has(stripped.toLowerCase())) {
+    return true;
+  }
+  // 片段觸發詞 contains 判斷
+  const lower = raw.toLowerCase();
+  return GO_PHRASES.some((sig) => lower.includes(sig.toLowerCase()));
 }
 
 export const runtime = "nodejs";
@@ -88,11 +98,67 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
   }
 
+  // 偵測用戶是否按了「直接生圖」紅色按鈕
+  const lastUserContent = messages.filter((m) => m.role === "user").pop()?.content || "";
+  const isForceGenerate = lastUserContent.includes(FORCE_GENERATE_TOKEN);
+
   // ── 2. 開啟 SSE 串流 ──
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       const send = (p: SsePayload) => controller.enqueue(encoder.encode(sseLine(p)));
+
+      // ── 強制生圖捷徑：跳過 AI 對話，直接 forceToolCall ──
+      if (isForceGenerate) {
+        send({ type: "tool_call_starting" });
+        try {
+          const params = await forceToolCall(messages);
+          if (!params) {
+            send({ type: "error", data: "AI 無法從目前資訊產生設計參數，請繼續多聊幾句" });
+            send({ type: "done" });
+            controller.close();
+            return;
+          }
+          // 套用 intake 強制覆寫
+          if (intake.hasText === "no") {
+            (params as Record<string, string>).text_overlay = "";
+          } else if (intake.textContent) {
+            (params as Record<string, string>).text_overlay = intake.textContent;
+          }
+          try {
+            await consumeGenerationQuota(3);
+          } catch (e) {
+            if (e instanceof DailyLimitExceededError) {
+              send({ type: "error", data: "今天的全站生圖額度已滿，請明天再來 🦞" });
+            } else {
+              send({ type: "error", data: "配額檢查失敗" });
+            }
+            send({ type: "done" });
+            controller.close();
+            return;
+          }
+          send({ type: "function_call", data: { params } });
+          send({ type: "generating" });
+          const prompts = [0, 1, 2].map((i) =>
+            buildZImagePrompt(params as unknown as DesignParams, {
+              shirtColor: intake.shirtColor,
+              variationIndex: i,
+            })
+          );
+          console.log("[poc/chat] FORCE_GENERATE prompts:");
+          prompts.forEach((p, i) => console.log(`  [${i}] ${p}`));
+          const urls = await generateMany(prompts, 3);
+          send({ type: "images_ready", data: { urls, prompt: prompts[0] } });
+        } catch (err) {
+          send({
+            type: "error",
+            data: err instanceof Error ? err.message : "強制生圖失敗",
+          });
+        }
+        send({ type: "done" });
+        controller.close();
+        return;
+      }
 
       try {
         const upstream = await streamChat(messages);

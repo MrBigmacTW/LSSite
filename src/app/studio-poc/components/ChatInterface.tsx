@@ -79,13 +79,13 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streamingText]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(overrideText?: string) {
+    const text = (overrideText ?? input).trim();
     if (!text || isLocked) return;
 
     const newMessages: Msg[] = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
-    setInput("");
+    if (!overrideText) setInput("");
     setStreamingText("");
 
     try {
@@ -227,6 +227,18 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
       </div>
 
       <div className="border-t border-fg3/20 pt-4">
+        {/* 紅色強制生圖按鈕：用戶聊過至少 2 輪後出現，給 AI 卡住時的逃生口 */}
+        {userTurns >= 2 && !isLocked && (
+          <button
+            onClick={() => send("[GENERATE_NOW] 不囉嗦了，就用現在的資訊直接生圖！")}
+            className="w-full mb-3 py-3 bg-gradient-to-r from-accent to-accent2 text-bg font-mono font-bold rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
+          >
+            <span>🚀</span>
+            <span>不囉嗦了，直接生圖</span>
+            <span className="text-xs opacity-70">(跳過剩餘對話)</span>
+          </button>
+        )}
+
         <div className="flex gap-3">
           <textarea
             value={input}
@@ -243,9 +255,9 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
             rows={2}
           />
           <button
-            onClick={send}
+            onClick={() => send()}
             disabled={!input.trim() || isLocked}
-            className="px-6 py-3 bg-accent text-bg font-mono font-medium rounded-lg hover:bg-accent2 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-bg3 border border-fg3/40 text-fg font-mono font-medium rounded-lg hover:border-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
             送出
           </button>
@@ -260,6 +272,8 @@ export default function ChatInterface({ accessKey, intake, onImagesReady }: Prop
 
 function Bubble({ role, text }: { role: "user" | "assistant"; text: string }) {
   const isUser = role === "user";
+  // 隱藏系統內部觸發 token，讓 UI 顯示乾淨
+  const displayText = text.replace(/\[GENERATE_NOW\]\s*/g, "").trim();
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
@@ -269,7 +283,7 @@ function Bubble({ role, text }: { role: "user" | "assistant"; text: string }) {
             : "bg-bg2 text-fg rounded-bl-sm border border-fg3/20"
         }`}
       >
-        {text}
+        {displayText}
       </div>
     </div>
   );
