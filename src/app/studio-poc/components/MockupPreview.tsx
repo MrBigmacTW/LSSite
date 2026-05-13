@@ -28,6 +28,18 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
   const [loading, setLoading] = useState(true);
 
   const template = POC_TEMPLATES.find((t) => t.id === templateId)!;
+  const currentPosition = template.positions.find((p) => p.id === positionId)!;
+
+  // 模板實際尺寸（POC 所有 png 都是 1086 × 1448）
+  // 浮水印只蓋在 printArea 上而不是整張 T 恤照片，保護的是設計而非 mockup
+  const TEMPLATE_W = 1086;
+  const TEMPLATE_H = 1448;
+  const watermarkBoxStyle = {
+    left: `${(currentPosition.printArea.x / TEMPLATE_W) * 100}%`,
+    top: `${(currentPosition.printArea.y / TEMPLATE_H) * 100}%`,
+    width: `${(currentPosition.printArea.width / TEMPLATE_W) * 100}%`,
+    height: `${(currentPosition.printArea.height / TEMPLATE_H) * 100}%`,
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -177,7 +189,10 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
                   alt="T 恤 mockup"
                   className="w-full object-contain"
                 />
-                <Watermark />
+                {/* 浮水印只蓋在印製區（design 範圍），不蓋整件衣服 */}
+                <div className="absolute" style={watermarkBoxStyle}>
+                  <Watermark />
+                </div>
               </div>
             </div>
           </div>

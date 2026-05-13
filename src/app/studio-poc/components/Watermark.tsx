@@ -1,30 +1,52 @@
 "use client";
 
 /**
- * POC 預覽用浮水印
- * - 純 CSS 覆蓋層（F12 可移除，POC 階段足夠）
- * - 半透明斜向 LOBSTER · PREVIEW 字樣
- * - 用法：在含 image 的相對定位容器內加 <Watermark />
+ * POC 預覽用浮水印（SVG 版）
+ *
+ * 用 SVG viewBox 自動縮放到容器大小，不依賴 viewport units。
+ * 同一個元件套在 320×320 的小方塊或 1086×1448 的大圖都能正確呈現。
+ *
+ * 用法：在含 image 的相對定位容器內加 <Watermark />
+ *   - 預設覆蓋整個父容器（absolute inset-0）
  */
 export default function Watermark() {
   return (
-    <div
-      className="pointer-events-none absolute inset-0 overflow-hidden select-none"
+    <svg
+      viewBox="0 0 200 200"
+      preserveAspectRatio="xMidYMid meet"
+      className="pointer-events-none absolute inset-0 w-full h-full select-none"
       aria-hidden="true"
     >
-      <div
-        className="absolute inset-0 flex items-center justify-center opacity-25"
-        style={{ transform: "rotate(-25deg)" }}
-      >
-        <div className="text-center text-white whitespace-pre leading-tight">
-          <div className="font-display font-bold tracking-[0.3em] text-[10vw] md:text-[5vw]">
-            LOBSTER
-          </div>
-          <div className="font-mono tracking-[0.5em] text-[3vw] md:text-[1.5vw] mt-1">
-            · PREVIEW ·
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* 半透明白色斜向 LOBSTER PREVIEW */}
+      <g transform="rotate(-25 100 100)" opacity="0.35">
+        <text
+          x="100"
+          y="95"
+          textAnchor="middle"
+          fill="white"
+          fontFamily="sans-serif"
+          fontWeight="bold"
+          fontSize="22"
+          letterSpacing="2"
+          stroke="rgba(0,0,0,0.3)"
+          strokeWidth="0.5"
+        >
+          LOBSTER
+        </text>
+        <text
+          x="100"
+          y="115"
+          textAnchor="middle"
+          fill="white"
+          fontFamily="monospace"
+          fontSize="9"
+          letterSpacing="3"
+          stroke="rgba(0,0,0,0.3)"
+          strokeWidth="0.3"
+        >
+          · PREVIEW ·
+        </text>
+      </g>
+    </svg>
   );
 }

@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
 import { composeMockup } from "@/lib/mockup-engine";
-import { composeMockupWithUnderbase } from "@/lib/poc/composePoc";
 import { storage } from "@/lib/storage";
 import {
   resolveTemplate,
@@ -68,10 +67,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const designBuffer = await loadDesign(designUrl);
-    // 深色衣 → 白底襯印製；淺色衣 → 既有去白底邏輯
-    const mockupBuffer = resolved.darkShirt
-      ? await composeMockupWithUnderbase(designBuffer, resolved)
-      : await composeMockup(designBuffer, resolved);
+    // POC 階段：AI 生圖已強制純白底，user 上傳 logo 也預期白底
+    // 統一走 composeMockup（去白底）→ 設計直接印在衣服上，不會看到白方塊
+    // composeMockupWithUnderbase 暫留作未來「深色 logo on 深色衣」用，目前不啟用
+    const mockupBuffer = await composeMockup(designBuffer, resolved);
 
     const ts = Date.now();
     const rand = Math.random().toString(36).slice(2, 8);
