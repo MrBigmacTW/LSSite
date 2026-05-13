@@ -4,12 +4,12 @@
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// 模型優先順序（429/5xx 會自動降級到下一個）
-// - gemini-flash-1.5: 配額較寬鬆、tool calling 穩定
-// - gemini-2.0-flash-lite-001: fallback，最大可用配額
+// 模型優先順序（429 / 5xx / 404 會自動降級）
+// - flash-lite-001: 配額最寬鬆，搭配嚴格 prompt 應可靠呼叫 tool
+// - flash-001: 次選，tool calling 最穩但配額較易耗盡
 const MODEL_FALLBACK_CHAIN = [
-  "google/gemini-flash-1.5",
   "google/gemini-2.0-flash-lite-001",
+  "google/gemini-2.0-flash-001",
 ];
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
@@ -129,13 +129,15 @@ export async function streamChat(messages: ChatMessage[]): Promise<Response> {
       return res;
     }
 
-    // 429 / 5xx → 記錄錯誤、嘗試下一個
+    // 429 / 5xx / 404 → 記錄錯誤、嘗試下一個
+    // （404 = model 在 OpenRouter 上不存在或暫時下架，也該 fallback）
     const text = await res.text();
-    const shouldFallback = res.status === 429 || res.status >= 500;
+    const shouldFallback =
+      res.status === 429 || res.status === 404 || res.status >= 500;
     errors.push(`${model} → ${res.status}: ${text.slice(0, 200)}`);
 
     if (!shouldFallback) {
-      // 4xx 非限流（如 400 / 401）就直接拋，不必試其他 model
+      // 其他 4xx（如 400 / 401 / 403）是設定錯誤，直接拋不重試
       throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
     }
     console.warn(`[poc/chat] ${model} unavailable (${res.status}), falling back...`);
