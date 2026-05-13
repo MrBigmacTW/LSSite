@@ -1,5 +1,7 @@
 "use client";
 
+import Watermark from "./Watermark";
+
 interface Props {
   urls: string[];
   onPick: (url: string) => void;
@@ -29,6 +31,7 @@ export default function GenerationResults({ urls, onPick, onRedo }: Props) {
               alt={`候選 ${i + 1}`}
               className="w-full aspect-square object-cover"
             />
+            <Watermark />
             <div className="absolute inset-0 bg-bg/0 group-hover:bg-bg/40 transition flex items-center justify-center">
               <span className="opacity-0 group-hover:opacity-100 transition font-mono text-fg bg-accent px-4 py-2 rounded">
                 選這張 →

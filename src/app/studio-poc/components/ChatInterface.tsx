@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { IntakeAnswers } from "./IntakeForm";
 
 interface Props {
   accessKey: string;
+  intake: IntakeAnswers;
   onImagesReady: (urls: string[]) => void;
 }
 
@@ -15,10 +17,53 @@ interface Msg {
 type Phase = "chatting" | "generating" | "error";
 
 const MAX_TURNS = 10;
-const OPENING = "你好！我是龍蝦設計師 #01 🦞\n\n先讓我了解一下，這件 T 恤是要自己穿、還是要送給特別的人？";
 
-export default function ChatInterface({ accessKey, onImagesReady }: Props) {
-  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: OPENING }]);
+/**
+ * 把 intake 答案組成「seed user message」放到對話開頭，讓 AI 知道客戶已選擇了什麼
+ */
+function buildSeedMessage(intake: IntakeAnswers): string {
+  const parts: string[] = [
+    `想印在：${intake.shirtColorLabel}`,
+    `用途：${humanizePurpose(intake.purpose)}`,
+    `風格：${intake.style}`,
+    `配色：${intake.colorPalette}`,
+  ];
+  if (intake.hasText === "yes" && intake.textContent) {
+    parts.push(`要加文字：「${intake.textContent}」`);
+  } else {
+    parts.push("不加文字，純圖案");
+  }
+  return parts.map((p) => `- ${p}`).join("\n");
+}
+
+function humanizePurpose(value: string): string {
+  // value 是英文（送給 AI 用），這裡轉中文顯示給人看
+  const map: Record<string, string> = {
+    "for personal wear": "自己穿",
+    "as a gift": "送禮",
+    "for a special occasion or memorial": "紀念日 / 特殊場合",
+    "to commemorate a beloved pet": "紀念毛小孩",
+    "for a group or event": "團體 / 活動",
+  };
+  return map[value] || value;
+}
+
+function buildOpening(intake: IntakeAnswers): string {
+  const hasText =
+    intake.hasText === "yes" && intake.textContent
+      ? `，會加上「${intake.textContent}」這個文字`
+      : "";
+  return `了解！你想要一件${intake.shirtColorLabel}的設計，看起來會是個很棒的方向${hasText} ✨\n\n再請教你一個關鍵問題：**設計的主題（main subject）想要什麼？**\n例如：一隻動物、一個人物、抽象元素、植物、食物、星空... 越具體越好。`;
+}
+
+export default function ChatInterface({ accessKey, intake, onImagesReady }: Props) {
+  // 第一輪：seed user 訊息（intake 答案）+ AI 開場白
+  const seedUser = buildSeedMessage(intake);
+  const opening = buildOpening(intake);
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "user", content: seedUser },
+    { role: "assistant", content: opening },
+  ]);
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<Phase>("chatting");
   const [streamingText, setStreamingText] = useState("");
@@ -49,6 +94,11 @@ export default function ChatInterface({ accessKey, onImagesReady }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          intake: {
+            shirtColor: intake.shirtColor,
+            hasText: intake.hasText,
+            textContent: intake.textContent || "",
+          },
         }),
       });
 

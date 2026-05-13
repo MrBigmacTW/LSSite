@@ -53,9 +53,11 @@ export async function POST(req: NextRequest) {
   }
 
   let messages: ChatMessage[] = [];
+  let intake: { shirtColor?: "white" | "black" | "any"; hasText?: string; textContent?: string } = {};
   try {
     const body = await req.json();
     messages = body.messages || [];
+    intake = body.intake || {};
   } catch {
     return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
   }
@@ -186,7 +188,16 @@ export async function POST(req: NextRequest) {
           send({ type: "generating" });
 
           try {
-            const prompt = buildZImagePrompt(params);
+            // 客戶 intake 強制覆寫某些參數，避免 AI 自由發揮跑題
+            if (intake.hasText === "no") {
+              params.text_overlay = "";
+            } else if (intake.textContent) {
+              params.text_overlay = intake.textContent;
+            }
+            const prompt = buildZImagePrompt(params, {
+              shirtColor: intake.shirtColor,
+            });
+            console.log("[poc/chat] Z-Image prompt:", prompt);
             const urls = await generateMany(prompt, 3);
             send({ type: "images_ready", data: { urls, prompt } });
           } catch (err) {

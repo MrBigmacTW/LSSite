@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Watermark from "./Watermark";
 import {
   POC_TEMPLATES,
   DEFAULT_TEMPLATE_ID,
@@ -11,14 +12,15 @@ import {
 interface Props {
   accessKey: string;
   designUrl: string;
+  defaultColorId?: string;  // intake 偏好顏色，沒給就用全域預設
   onRedo: () => void;
 }
 
-export default function MockupPreview({ accessKey, designUrl, onRedo }: Props) {
+export default function MockupPreview({ accessKey, designUrl, defaultColorId, onRedo }: Props) {
   // setTemplateId 目前未用（POC 只開短袖正面）；保留是為了未來新增其他模板時切換用
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [templateId, setTemplateId] = useState(DEFAULT_TEMPLATE_ID);
-  const [colorId, setColorId] = useState(DEFAULT_COLOR_ID);
+  const [colorId, setColorId] = useState(defaultColorId || DEFAULT_COLOR_ID);
   const [positionId, setPositionId] = useState(DEFAULT_POSITION_ID);
 
   const [mockupUrl, setMockupUrl] = useState<string | null>(null);
@@ -168,13 +170,14 @@ export default function MockupPreview({ accessKey, designUrl, onRedo }: Props) {
               <p className="text-xs font-mono text-fg3 mb-2 uppercase tracking-wider">
                 T 恤效果
               </p>
-              <div className="bg-bg3 rounded-xl overflow-hidden">
+              <div className="bg-bg3 rounded-xl overflow-hidden relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mockupUrl}
                   alt="T 恤 mockup"
                   className="w-full object-contain"
                 />
+                <Watermark />
               </div>
             </div>
           </div>
