@@ -91,9 +91,8 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    // 嘗試 3：再往中間 (x=140)
-    // 前兩次：x=122 飛出去、x=265 跑到胸口
-    printArea: { x: 140, y: 220, width: 105, height: 150 },
+    // 依用戶手繪框校準：袖區中心 ≈ (140, 430)
+    printArea: { x: 85, y: 355, width: 105, height: 150 },
   },
 ];
 
