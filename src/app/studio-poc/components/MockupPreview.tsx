@@ -9,6 +9,22 @@ import {
   DEFAULT_POSITION_ID,
 } from "@/lib/poc/pocTemplate";
 
+type PrintMode = "default" | "darker" | "lighter" | "white_plate" | "black_plate";
+
+interface PrintModeOption {
+  id: PrintMode;
+  label: string;
+  hint: string;
+}
+
+const PRINT_MODES: PrintModeOption[] = [
+  { id: "default", label: "透明去背", hint: "預設・直接印" },
+  { id: "darker", label: "加深", hint: "設計太淡時用" },
+  { id: "lighter", label: "提亮", hint: "黑衣消失時用" },
+  { id: "white_plate", label: "加白底", hint: "深衣強對比" },
+  { id: "black_plate", label: "加黑底", hint: "淺衣強對比" },
+];
+
 interface Props {
   accessKey: string;
   designUrl: string;
@@ -22,6 +38,7 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
   const [templateId, setTemplateId] = useState(DEFAULT_TEMPLATE_ID);
   const [colorId, setColorId] = useState(defaultColorId || DEFAULT_COLOR_ID);
   const [positionId, setPositionId] = useState(DEFAULT_POSITION_ID);
+  const [printMode, setPrintMode] = useState<PrintMode>("default");
 
   const [mockupUrl, setMockupUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -50,7 +67,7 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
         const res = await fetch(`/api/poc/mockup?key=${encodeURIComponent(accessKey)}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ designUrl, templateId, colorId, positionId }),
+          body: JSON.stringify({ designUrl, templateId, colorId, positionId, printMode }),
         });
         const data = await res.json();
         if (cancelled) return;
@@ -65,7 +82,7 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
     return () => {
       cancelled = true;
     };
-  }, [designUrl, accessKey, templateId, colorId, positionId]);
+  }, [designUrl, accessKey, templateId, colorId, positionId, printMode]);
 
   return (
     <div className="max-w-6xl mx-auto pt-6">
@@ -103,7 +120,7 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
         </div>
 
         {/* 位置 */}
-        <div>
+        <div className="mb-5">
           <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
             印製位置
           </p>
@@ -129,6 +146,40 @@ export default function MockupPreview({ accessKey, designUrl, defaultColorId, on
                   </div>
                   <div className="text-xs font-mono text-fg3">{p.sizeCm}</div>
                   <div className="text-xs text-fg2 mt-1">{p.description}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 印製模式（圖案調整） */}
+        <div>
+          <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
+            印製模式
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PRINT_MODES.map((m) => {
+              const active = printMode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setPrintMode(m.id)}
+                  className={`px-3 py-2 rounded-lg border text-left transition ${
+                    active
+                      ? "border-accent bg-accent/10"
+                      : "border-fg3/30 bg-bg3/40 hover:border-fg2"
+                  }`}
+                >
+                  <div
+                    className={`text-sm font-medium ${
+                      active ? "text-accent" : "text-fg"
+                    }`}
+                  >
+                    {m.label}
+                  </div>
+                  <div className="text-xs font-mono text-fg3 mt-0.5">
+                    {m.hint}
+                  </div>
                 </button>
               );
             })}

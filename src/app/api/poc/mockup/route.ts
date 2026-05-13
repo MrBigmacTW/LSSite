@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
-import { composeMockup } from "@/lib/mockup-engine";
+import { composeMockupForPoc, type PrintMode } from "@/lib/poc/composePoc";
 import { storage } from "@/lib/storage";
 import {
   resolveTemplate,
@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
   let templateId = DEFAULT_TEMPLATE_ID;
   let colorId = DEFAULT_COLOR_ID;
   let positionId = DEFAULT_POSITION_ID;
+  let printMode: PrintMode = "default";
+
+  const VALID_MODES: PrintMode[] = ["default", "darker", "lighter", "white_plate", "black_plate"];
 
   try {
     const body = await req.json();
@@ -50,6 +53,9 @@ export async function POST(req: NextRequest) {
     if (typeof body.templateId === "string") templateId = body.templateId;
     if (typeof body.colorId === "string") colorId = body.colorId;
     if (typeof body.positionId === "string") positionId = body.positionId;
+    if (typeof body.printMode === "string" && VALID_MODES.includes(body.printMode as PrintMode)) {
+      printMode = body.printMode as PrintMode;
+    }
     if (!designUrl || typeof designUrl !== "string") {
       return NextResponse.json({ error: "Missing designUrl" }, { status: 400 });
     }
@@ -67,10 +73,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const designBuffer = await loadDesign(designUrl);
-    // POC 階段：AI 生圖已強制純白底，user 上傳 logo 也預期白底
-    // 統一走 composeMockup（去白底）→ 設計直接印在衣服上，不會看到白方塊
-    // composeMockupWithUnderbase 暫留作未來「深色 logo on 深色衣」用，目前不啟用
-    const mockupBuffer = await composeMockup(designBuffer, resolved);
+    const mockupBuffer = await composeMockupForPoc(designBuffer, resolved, printMode);
 
     const ts = Date.now();
     const rand = Math.random().toString(36).slice(2, 8);
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
     const saved = await storage.upload(mockupBuffer, filePath);
     const url = saved.startsWith("http") ? saved : storage.getUrl(saved);
 
-    return NextResponse.json({ url, templateId, colorId, positionId });
+    return NextResponse.json({ url, templateId, colorId, positionId, printMode });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "合成失敗" },
