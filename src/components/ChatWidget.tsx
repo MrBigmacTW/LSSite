@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import faqData from "@/data/faq.json";
 
 // ── Types ──
@@ -21,6 +22,10 @@ const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 小時
 
 // ── 主元件 ──
 export default function ChatWidget() {
+  const pathname = usePathname();
+  // POC 頁面隱藏 floating chat（避免與沉浸式對話 UI 衝突）
+  const hidden = pathname?.startsWith("/studio-poc") ?? false;
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ViewState>("main");
   const [faqCatId, setFaqCatId] = useState<string | null>(null);
@@ -116,6 +121,9 @@ export default function ChatWidget() {
     setView("main");
     localStorage.removeItem(STORAGE_KEY);
   };
+
+  // POC 頁面完全隱藏
+  if (hidden) return null;
 
   // ── 按鈕 ──
   if (!open) {
