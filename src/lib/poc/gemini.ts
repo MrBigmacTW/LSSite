@@ -4,8 +4,13 @@
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Flash-001（非 Lite）：tool calling 可靠度比 Flash Lite 高很多
-const MODEL = "google/gemini-2.0-flash-001";
+// 模型優先順序（429/5xx 會自動降級到下一個）
+// - gemini-flash-1.5: 配額較寬鬆、tool calling 穩定
+// - gemini-2.0-flash-lite-001: fallback，最大可用配額
+const MODEL_FALLBACK_CHAIN = [
+  "google/gemini-flash-1.5",
+  "google/gemini-2.0-flash-lite-001",
+];
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
 export const GENERATE_DESIGN_TOOL = {
@@ -78,17 +83,9 @@ export interface ChatMessage {
   name?: string;
 }
 
-/**
- * 開啟 streaming chat completion。
- * 回傳 raw Response — 呼叫端負責讀 SSE body。
- */
-export async function streamChat(messages: ChatMessage[]): Promise<Response> {
-  if (!OPENROUTER_KEY) {
-    throw new Error("OPENROUTER_API_KEY not configured");
-  }
-
+async function callOpenRouter(model: string, messages: ChatMessage[]): Promise<Response> {
   const body = {
-    model: MODEL,
+    model,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages,
@@ -100,7 +97,7 @@ export async function streamChat(messages: ChatMessage[]): Promise<Response> {
     stream: true,
   };
 
-  const res = await fetch(OPENROUTER_URL, {
+  return fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${OPENROUTER_KEY}`,
@@ -108,11 +105,41 @@ export async function streamChat(messages: ChatMessage[]): Promise<Response> {
     },
     body: JSON.stringify(body),
   });
+}
 
-  if (!res.ok || !res.body) {
-    const text = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
+/**
+ * 開啟 streaming chat completion。回傳 raw Response — 呼叫端負責讀 SSE body。
+ *
+ * 自動 fallback：主模型遇 429 / 5xx 時切到下一個模型重試。
+ * 全部失敗才拋錯。
+ */
+export async function streamChat(messages: ChatMessage[]): Promise<Response> {
+  if (!OPENROUTER_KEY) {
+    throw new Error("OPENROUTER_API_KEY not configured");
   }
 
-  return res;
+  const errors: string[] = [];
+
+  for (const model of MODEL_FALLBACK_CHAIN) {
+    const res = await callOpenRouter(model, messages);
+
+    // 成功 → 直接回
+    if (res.ok && res.body) {
+      console.log(`[poc/chat] using model: ${model}`);
+      return res;
+    }
+
+    // 429 / 5xx → 記錄錯誤、嘗試下一個
+    const text = await res.text();
+    const shouldFallback = res.status === 429 || res.status >= 500;
+    errors.push(`${model} → ${res.status}: ${text.slice(0, 200)}`);
+
+    if (!shouldFallback) {
+      // 4xx 非限流（如 400 / 401）就直接拋，不必試其他 model
+      throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
+    }
+    console.warn(`[poc/chat] ${model} unavailable (${res.status}), falling back...`);
+  }
+
+  throw new Error(`All models exhausted:\n${errors.join("\n")}`);
 }
