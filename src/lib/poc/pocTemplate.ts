@@ -91,8 +91,8 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    // 袖區在圖左側，估 x_center ≈ 175，y ≈ 290
-    printArea: { x: 122, y: 290, width: 105, height: 150 },
+    // 左袖實際位置 x≈260-380, y≈210-340，置中於袖區
+    printArea: { x: 265, y: 235, width: 105, height: 150 },
   },
 ];
 
