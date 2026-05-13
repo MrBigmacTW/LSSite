@@ -22,7 +22,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface SsePayload {
-  type: "token" | "function_call" | "generating" | "images_ready" | "error" | "done";
+  type:
+    | "token"
+    | "tool_call_starting"   // 第一次偵測到 tool_call delta，UI 可立刻提示「準備中」
+    | "function_call"        // 完整參數（stream 結束後）
+    | "generating"           // 後端開始呼叫 KIE
+    | "images_ready"
+    | "error"
+    | "done";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
 }
@@ -64,6 +71,7 @@ export async function POST(req: NextRequest) {
         let toolCallId: string | null = null;
         let toolCallName: string | null = null;
         let toolCallArgs = "";
+        let toolCallStartEmitted = false;
 
         outer: while (true) {
           const { value, done } = await reader.read();
@@ -93,6 +101,11 @@ export async function POST(req: NextRequest) {
 
               // ── tool call（OpenAI / OpenRouter 格式，分塊累積） ──
               if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
+                // 第一次看到 tool_call delta：立刻通知前端可顯示「準備中」inline UI
+                if (!toolCallStartEmitted) {
+                  toolCallStartEmitted = true;
+                  send({ type: "tool_call_starting" });
+                }
                 for (const tc of delta.tool_calls) {
                   if (tc.id) toolCallId = tc.id;
                   if (tc.function?.name) toolCallName = tc.function.name;

@@ -24,6 +24,7 @@ export default function ChatInterface({ accessKey, onImagesReady }: Props) {
   const [streamingText, setStreamingText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [generationCalled, setGenerationCalled] = useState(false);
+  const [preparing, setPreparing] = useState(false);  // tool_call_starting → 顯示 inline 進度條
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const userTurns = messages.filter((m) => m.role === "user").length;
@@ -81,8 +82,13 @@ export default function ChatInterface({ accessKey, onImagesReady }: Props) {
                 assistantText += ev.data;
                 setStreamingText(assistantText);
                 break;
+              case "tool_call_starting":
+                // AI 開始輸出 function call → 立刻顯示 inline 準備中
+                setPreparing(true);
+                setGenerationCalled(true);
+                break;
               case "function_call":
-                // AI 決定生圖了，鎖定輸入
+                // 完整 function 參數累積完成（stream 結束）
                 setGenerationCalled(true);
                 break;
               case "generating":
@@ -156,6 +162,18 @@ export default function ChatInterface({ accessKey, onImagesReady }: Props) {
           <Bubble key={i} role={m.role} text={m.content} />
         ))}
         {streamingText && <Bubble role="assistant" text={streamingText} />}
+        {preparing && (
+          <div className="flex justify-start">
+            <div className="bg-accent/10 border border-accent/30 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-3">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+              <span className="text-sm text-accent font-mono">正在召喚生圖引擎...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-fg3/20 pt-4">
