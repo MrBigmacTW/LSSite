@@ -23,6 +23,32 @@ import { generateMany } from "@/lib/poc/zimage";
 import { buildZImagePrompt, type DesignParams } from "@/lib/poc/promptProcessor";
 import { consumeGenerationQuota, DailyLimitExceededError } from "@/lib/poc/globalLimit";
 
+// 客戶是否說出「開始生圖」的明確信號
+const GO_SIGNALS = [
+  "做吧",
+  "畫吧",
+  "開始",
+  "就這樣",
+  "可以了",
+  "好了，畫",
+  "好了畫",
+  "快點",
+  "go",
+  "start",
+  "ready",
+  "畫看看",
+  "幫我做",
+  "幫我畫",
+  "ok 開始",
+  "OK 開始",
+];
+
+function userSaidGo(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase().trim();
+  return GO_SIGNALS.some((sig) => lower.includes(sig.toLowerCase()));
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -130,13 +156,19 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // ── 2.5 沒拿到 tool_call？做 fallback：偵測 summary 字樣 → 非串流強制 tool_choice ──
+        // ── 2.5 沒拿到 tool_call？做 fallback：偵測 summary 字樣 + 客戶 go signal → 非串流強制 tool_choice ──
         // 已知問題：Gemini + OpenRouter + streaming 組合下，tool_call delta 有時不會吐出
         // 解法：當 AI 文字看起來像 summary 但沒收到 tool_call，重打一次 non-streaming + 強制 tool_choice
+        //
+        // 重要：必須加 go-signal 守門 — 客戶沒明說「開始/做吧」就不要強迫生圖
+        // （之前 AI 跟客戶才聊 1 輪就觸發 summary 然後 fallback 直接送生圖，UX 太突兀）
+        const lastUserMsg = messages.filter((m) => m.role === "user").pop();
+        const userGo = userSaidGo(lastUserMsg?.content || "");
         if (
           (!toolCallName || !toolCallArgs) &&
           looksLikeSummary(assistantText) &&
-          messages.length >= 4 // 至少有 2 輪對話避免太早觸發
+          userGo &&
+          messages.length >= 4
         ) {
           // 包含目前這輪 assistant 文字進歷史，讓 forceToolCall 有完整 context
           const forcedHistory: ChatMessage[] = [
@@ -194,12 +226,17 @@ export async function POST(req: NextRequest) {
             } else if (intake.textContent) {
               params.text_overlay = intake.textContent;
             }
-            const prompt = buildZImagePrompt(params, {
-              shirtColor: intake.shirtColor,
-            });
-            console.log("[poc/chat] Z-Image prompt:", prompt);
-            const urls = await generateMany(prompt, 3);
-            send({ type: "images_ready", data: { urls, prompt } });
+            // 三張生圖各帶不同 variationIndex → 構圖多樣性（解決「三張過像」問題）
+            const prompts = [0, 1, 2].map((i) =>
+              buildZImagePrompt(params, {
+                shirtColor: intake.shirtColor,
+                variationIndex: i,
+              })
+            );
+            console.log("[poc/chat] Z-Image prompts (3 variations):");
+            prompts.forEach((p, i) => console.log(`  [${i}] ${p}`));
+            const urls = await generateMany(prompts, 3);
+            send({ type: "images_ready", data: { urls, prompt: prompts[0] } });
           } catch (err) {
             send({
               type: "error",

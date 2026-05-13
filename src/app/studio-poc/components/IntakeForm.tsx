@@ -51,6 +51,7 @@ const STEPS: Step[] = [
       { id: "memorial", label: "紀念日 / 特殊場合", value: "for a special occasion or memorial" },
       { id: "pet", label: "紀念毛小孩", value: "to commemorate a beloved pet" },
       { id: "group", label: "團體 / 活動", value: "for a group or event" },
+      { id: "other", label: "其他 — 我自己說", value: "__OTHER__" },
     ],
   },
   {
@@ -64,6 +65,7 @@ const STEPS: Step[] = [
       { id: "realistic", label: "寫實 / 攝影感", value: "photorealistic illustration" },
       { id: "abstract", label: "抽象幾何", value: "abstract geometric design" },
       { id: "cute", label: "可愛 Q 版", value: "cute chibi kawaii style" },
+      { id: "other", label: "其他 — 我自己說", value: "__OTHER__" },
     ],
   },
   {
@@ -76,6 +78,7 @@ const STEPS: Step[] = [
       { id: "earth", label: "大地自然色", value: "earthy natural tones" },
       { id: "neon", label: "螢光霓虹", value: "neon bright glowing colors" },
       { id: "muted", label: "沉穩低彩度", value: "muted desaturated tones" },
+      { id: "other", label: "其他 — 我自己說", value: "__OTHER__" },
     ],
   },
   {
@@ -93,13 +96,22 @@ export default function IntakeForm({ onComplete }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [textInput, setTextInput] = useState("");
-  const [textStep, setTextStep] = useState(false);  // hasText="yes" 後追問文字內容
+  const [textStep, setTextStep] = useState(false);   // hasText="yes" 後追問文字內容
+  const [otherInput, setOtherInput] = useState("");
+  const [otherMode, setOtherMode] = useState(false); // 「其他」選項 → 顯示自由輸入
 
   const step = STEPS[stepIndex];
   const total = STEPS.length;
-  const progress = ((stepIndex + (textStep ? 0.5 : 0)) / total) * 100;
+  const progress = ((stepIndex + (textStep || otherMode ? 0.5 : 0)) / total) * 100;
 
   function selectOption(option: Option) {
+    // 「其他」選項 → 切到自由輸入子畫面
+    if (option.value === "__OTHER__") {
+      setOtherInput("");
+      setOtherMode(true);
+      return;
+    }
+
     const newAnswers = { ...answers };
     if (step.key === "shirtColor") {
       newAnswers.shirtColor = option.id;
@@ -114,6 +126,15 @@ export default function IntakeForm({ onComplete }: Props) {
       return;
     }
 
+    advance(newAnswers);
+  }
+
+  function submitOther() {
+    const trimmed = otherInput.trim();
+    if (!trimmed) return;
+    const newAnswers = { ...answers, [step.key]: trimmed };
+    setAnswers(newAnswers);
+    setOtherMode(false);
     advance(newAnswers);
   }
 
@@ -139,6 +160,10 @@ export default function IntakeForm({ onComplete }: Props) {
   }
 
   function goBack() {
+    if (otherMode) {
+      setOtherMode(false);
+      return;
+    }
     if (textStep) {
       setTextStep(false);
       return;
@@ -165,8 +190,43 @@ export default function IntakeForm({ onComplete }: Props) {
         </div>
       </div>
 
-      {/* 文字輸入分支 */}
-      {textStep ? (
+      {/* 「其他」自由輸入分支 */}
+      {otherMode ? (
+        <div>
+          <h2 className="font-display text-2xl md:text-3xl font-bold mb-3">
+            {step.title}
+          </h2>
+          <p className="text-fg2 text-sm mb-6">
+            描述你想要的{step.key === "purpose" ? "用途" : step.key === "style" ? "風格" : "配色"}
+            （建議簡短具體，例如：「歐洲文藝復興油畫風」「霧面金屬質感」）
+          </p>
+          <input
+            type="text"
+            value={otherInput}
+            onChange={(e) => setOtherInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitOther()}
+            placeholder="輸入你的描述..."
+            className="w-full bg-bg2 border border-fg3/30 rounded-lg px-4 py-3 text-fg placeholder:text-fg3 focus:outline-none focus:border-accent transition mb-4"
+            autoFocus
+            maxLength={60}
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={goBack}
+              className="px-5 py-3 bg-bg2 border border-fg3/30 rounded-lg hover:border-fg2 text-fg2 transition"
+            >
+              ← 返回選項
+            </button>
+            <button
+              onClick={submitOther}
+              disabled={!otherInput.trim()}
+              className="flex-1 px-6 py-3 bg-accent text-bg font-mono font-medium rounded-lg hover:bg-accent2 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              下一題 →
+            </button>
+          </div>
+        </div>
+      ) : textStep ? (
         <div>
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-3">
             要在設計上加什麼文字？

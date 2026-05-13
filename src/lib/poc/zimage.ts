@@ -94,10 +94,20 @@ export async function generateOne(prompt: string): Promise<string> {
 /**
  * 並發生 N 張（POC 用 3）
  * 失敗的會以 null 占位（不中斷其他）
+ *
+ * 如果傳入 prompts 陣列（已含 variation hint 的 N 個 prompts），則每張用不同 prompt
+ * 否則所有 N 張共用同一個 prompt（舊行為）
  */
-export async function generateMany(prompt: string, n: number = 3): Promise<string[]> {
+export async function generateMany(
+  promptOrPrompts: string | string[],
+  n: number = 3
+): Promise<string[]> {
+  const prompts = Array.isArray(promptOrPrompts)
+    ? promptOrPrompts
+    : Array.from({ length: n }, () => promptOrPrompts);
+
   const tasks = await Promise.allSettled(
-    Array.from({ length: n }, () => generateOne(prompt))
+    prompts.map((p) => generateOne(p))
   );
   const urls: string[] = [];
   for (const t of tasks) {
