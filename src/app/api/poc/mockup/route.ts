@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
 import { composeMockup } from "@/lib/mockup-engine";
+import { composeMockupWithUnderbase } from "@/lib/poc/composePoc";
 import { storage } from "@/lib/storage";
 import {
   resolveTemplate,
@@ -67,7 +68,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const designBuffer = await loadDesign(designUrl);
-    const mockupBuffer = await composeMockup(designBuffer, resolved);
+    // 深色衣 → 白底襯印製；淺色衣 → 既有去白底邏輯
+    const mockupBuffer = resolved.darkShirt
+      ? await composeMockupWithUnderbase(designBuffer, resolved)
+      : await composeMockup(designBuffer, resolved);
 
     const ts = Date.now();
     const rand = Math.random().toString(36).slice(2, 8);

@@ -33,6 +33,7 @@ export interface TemplateColor {
   label: string;        // "白色"
   hex: string;          // 顯示用色票
   imagePath: string;    // 模板底圖
+  darkShirt?: boolean;  // 是否為深色衣 → 啟用白底襯印製模式（不去背）
 }
 
 export interface TemplateModel {
@@ -107,12 +108,14 @@ export const POC_TEMPLATES: TemplateModel[] = [
         label: "白色",
         hex: "#F5F5F0",
         imagePath: "/templates/short_sleeve_front_white.png",
+        darkShirt: false,
       },
       {
         id: "black",
         label: "黑色",
         hex: "#1A1A1A",
         imagePath: "/templates/short_sleeve_front_black.png",
+        darkShirt: true,  // 啟用白底襯（模擬 DTG underbase 印製）
       },
     ],
     positions: FRONT_POSITIONS,
@@ -125,11 +128,12 @@ export const DEFAULT_TEMPLATE_ID = "short_sleeve_front";
 export const DEFAULT_COLOR_ID = "white";
 export const DEFAULT_POSITION_ID = "A";
 
-// ── Helper：依 ids 找到實際合成所需的 (imagePath, printArea, slug) ──
+// ── Helper：依 ids 找到實際合成所需的 (imagePath, printArea, slug, darkShirt) ──
 export interface ResolvedTemplate {
   slug: string;          // 給 mockup-engine 用的識別 (供未來 cache)
   imagePath: string;
   printArea: PrintArea;
+  darkShirt: boolean;    // 是否啟用白底襯印製模式
 }
 
 export function resolveTemplate(
@@ -147,5 +151,6 @@ export function resolveTemplate(
     slug: `${template.id}_${color.id}_${position.id}`,
     imagePath: color.imagePath,
     printArea: position.printArea,
+    darkShirt: color.darkShirt ?? false,
   };
 }
