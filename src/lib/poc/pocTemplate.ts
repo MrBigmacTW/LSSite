@@ -1,14 +1,15 @@
 /**
  * POC 模板資料（為未來多模板/多顏色擴充而設計的結構）
  *
- * 模板圖實際尺寸：2000 × 2400 px
+ * 模板圖實際尺寸：1086 × 1448 px（真實 T 恤產品照）
  *
  * 座標推算基準（假設值，第一次合成後可微調）：
- *   - T 恤本體可視寬度 ≈ 1600 px（中心 x=1000）
- *   - 1 cm ≈ 32 px（依 50cm 胸寬反推）
- *   - 胸口印製區頂端起點 ≈ y=520（領口下方 10cm）
+ *   - T 恤本體可視寬度 ≈ 750 px（中心 x ≈ 543）
+ *   - 1 cm ≈ 15 px（依 50cm 胸寬反推）
+ *   - 領口下緣 ≈ y=210
+ *   - 胸口印製區頂端起點 ≈ y=350（領口下方 10cm）
  *
- * 目前實作：只開「短袖白 T 正面」一件 + 6 個正面位置（A-F）
+ * 目前實作：短袖正面 × 白/黑 × 6 個位置（A-F）
  * 為將來保留結構：colors[] 與 positions[] 都是陣列，可擴充
  */
 
@@ -42,48 +43,55 @@ export interface TemplateModel {
 }
 
 // ── 正面 6 個印製位置（依參考圖 A-F） ──
+// 模板 1086×1448，T 恤中心 x ≈ 543，1cm ≈ 15px
 const FRONT_POSITIONS: PrintPosition[] = [
   {
     id: "A",
     label: "A · 正面大圖",
     sizeCm: "29×42 cm (A3)",
     description: "滿版主視覺",
-    printArea: { x: 536, y: 560, width: 928, height: 1344 },
+    // 29×42 cm → 435×630 px，置中於 x=543
+    printArea: { x: 326, y: 320, width: 435, height: 630 },
   },
   {
     id: "B",
     label: "B · 正面中圖",
     sizeCm: "21×29 cm (A4)",
     description: "中型設計",
-    printArea: { x: 664, y: 680, width: 672, height: 928 },
+    // 21×29 cm → 315×435 px
+    printArea: { x: 386, y: 380, width: 315, height: 435 },
   },
   {
     id: "C",
     label: "C · 正面橫向",
     sizeCm: "15×21 cm",
     description: "橫式 logo / 字樣",
-    printArea: { x: 760, y: 780, width: 480, height: 672 },
+    // 15×21 cm → 225×315 px
+    printArea: { x: 431, y: 440, width: 225, height: 315 },
   },
   {
     id: "D",
     label: "D · 胸口置中",
     sizeCm: "10×10 cm",
     description: "小 logo 居中",
-    printArea: { x: 840, y: 720, width: 320, height: 320 },
+    // 10×10 cm → 150×150 px，靠上一點
+    printArea: { x: 468, y: 360, width: 150, height: 150 },
   },
   {
     id: "E",
     label: "E · 左胸",
     sizeCm: "10×10 cm",
     description: "經典左胸 logo",
-    printArea: { x: 560, y: 720, width: 320, height: 320 },
+    // 中心左偏 12cm = 180px，x_center = 543-180 = 363
+    printArea: { x: 288, y: 360, width: 150, height: 150 },
   },
   {
     id: "F",
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    printArea: { x: 240, y: 760, width: 224, height: 320 },
+    // 袖區在圖左側，估 x_center ≈ 175，y ≈ 290
+    printArea: { x: 122, y: 290, width: 105, height: 150 },
   },
 ];
 
@@ -100,13 +108,12 @@ export const POC_TEMPLATES: TemplateModel[] = [
         hex: "#F5F5F0",
         imagePath: "/templates/short_sleeve_front_white.png",
       },
-      // 未來：取消下方註解即可加黑 T
-      // {
-      //   id: "black",
-      //   label: "黑色",
-      //   hex: "#1A1A1A",
-      //   imagePath: "/templates/short_sleeve_front_black.png",
-      // },
+      {
+        id: "black",
+        label: "黑色",
+        hex: "#1A1A1A",
+        imagePath: "/templates/short_sleeve_front_black.png",
+      },
     ],
     positions: FRONT_POSITIONS,
   },
