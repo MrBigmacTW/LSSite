@@ -78,10 +78,6 @@ export default function StudioClient({ accessKey }: Props) {
     }
   }
 
-  // intake 偏好顏色 → mockup 預覽預設顏色
-  const preferredColorId =
-    intakeAnswers?.shirtColor === "black" ? "black" : "white";
-
   return (
     <main className="min-h-screen bg-bg text-fg">
       <header className="w-full px-6 md:px-12 py-5 flex items-center justify-between border-b border-fg3/20">
@@ -121,7 +117,6 @@ export default function StudioClient({ accessKey }: Props) {
         {mode === "chat" && intakeAnswers && (
           <ChatInterface
             accessKey={accessKey}
-            intake={intakeAnswers}
             messages={chatMessages}
             setMessages={setChatMessages}
             onImagesReady={(urls) => {
@@ -181,7 +176,6 @@ export default function StudioClient({ accessKey }: Props) {
           <MockupPreview
             accessKey={accessKey}
             designUrl={selectedDesignUrl}
-            defaultColorId={preferredColorId}
             onRedo={fullReset}
           />
         )}

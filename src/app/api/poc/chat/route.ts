@@ -89,11 +89,10 @@ export async function POST(req: NextRequest) {
   }
 
   let messages: ChatMessage[] = [];
-  let intake: { shirtColor?: "white" | "black" | "any"; hasText?: string; textContent?: string } = {};
   try {
     const body = await req.json();
     messages = body.messages || [];
-    intake = body.intake || {};
+    // 新版 intake 不再帶 shirtColor / hasText / textContent，body.intake 視為空物件
   } catch {
     return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
   }
@@ -121,12 +120,7 @@ export async function POST(req: NextRequest) {
             controller.close();
             return;
           }
-          // 套用 intake 強制覆寫
-          if (intake.hasText === "no") {
-            (params as Record<string, string>).text_overlay = "";
-          } else if (intake.textContent) {
-            (params as Record<string, string>).text_overlay = intake.textContent;
-          }
+          // text_overlay 由 AI 自行決定（intake 不再強制）
           send({ type: "function_call", data: { params } });
         } catch (err) {
           send({
@@ -245,13 +239,7 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          // 套用 intake 強制覆寫
-          if (intake.hasText === "no") {
-            params.text_overlay = "";
-          } else if (intake.textContent) {
-            params.text_overlay = intake.textContent;
-          }
-
+          // text_overlay 由 AI 自行決定（intake 不再強制）
           send({ type: "function_call", data: { id: toolCallId, params } });
         }
 

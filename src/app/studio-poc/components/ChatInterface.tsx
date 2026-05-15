@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { IntakeAnswers } from "./IntakeForm";
 import type { Msg } from "@/lib/poc/chatSeed";
 
 interface Props {
   accessKey: string;
-  intake: IntakeAnswers;
   /** 對話歷史（受控）— 由 StudioClient 持有，這樣「重新對話」回 chat 才不會被重置 */
   messages: Msg[];
   setMessages: React.Dispatch<React.SetStateAction<Msg[]>>;
@@ -22,7 +20,6 @@ const MAX_TURNS = 10;
 
 export default function ChatInterface({
   accessKey,
-  intake,
   messages,
   setMessages,
   onImagesReady,
@@ -70,7 +67,8 @@ export default function ChatInterface({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             params,
-            intake: { shirtColor: intake.shirtColor },
+            // 新版 intake 不含 shirtColor → 用 "any" 讓 AI 生平衡色
+            intake: { shirtColor: "any" as const },
           }),
         }
       );
@@ -258,11 +256,8 @@ export default function ChatInterface({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-          intake: {
-            shirtColor: intake.shirtColor,
-            hasText: intake.hasText,
-            textContent: intake.textContent || "",
-          },
+          // 新版 intake 不再傳 shirtColor / hasText / textContent
+          intake: {},
         }),
       });
 
