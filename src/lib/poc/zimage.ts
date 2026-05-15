@@ -91,12 +91,81 @@ async function pollTask(taskId: string): Promise<string> {
 }
 
 /**
- * 一次生 1 張
+ * 一次生 1 張（同步等待）
+ * ⚠️ 不建議在 Vercel function 內呼叫多次（會 timeout），
+ *    請用 submitTask + checkTask 拆成兩個 endpoint
  */
 export async function generateOne(prompt: string): Promise<string> {
   if (!KIE_API_KEY) throw new Error("KIE_API_KEY not configured");
   const taskId = await createTask(prompt);
   return pollTask(taskId);
+}
+
+/**
+ * 只提交 task，不等結果。回傳 taskId。
+ * 給「兩階段架構」用：先提交，前端再 poll 狀態。
+ */
+export async function submitTask(prompt: string): Promise<string> {
+  if (!KIE_API_KEY) throw new Error("KIE_API_KEY not configured");
+  return createTask(prompt);
+}
+
+/**
+ * 檢查單一 task 狀態（不阻塞，立即回）
+ */
+export interface TaskStatus {
+  taskId: string;
+  state: "pending" | "success" | "failed";
+  url?: string;
+  error?: string;
+}
+
+export async function checkTask(taskId: string): Promise<TaskStatus> {
+  if (!KIE_API_KEY) {
+    return { taskId, state: "failed", error: "KIE_API_KEY not configured" };
+  }
+  try {
+    const res = await fetch(`${KIE_API_URL}/recordInfo?taskId=${taskId}`, {
+      headers: { Authorization: `Bearer ${KIE_API_KEY}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return {
+        taskId,
+        state: "failed",
+        error: `HTTP ${res.status}: ${text.slice(0, 100)}`,
+      };
+    }
+    const data = (await res.json()) as RecordInfoResp;
+    const state = data.data?.state;
+    if (state === "success" && data.data?.resultJson) {
+      try {
+        const result = JSON.parse(data.data.resultJson) as { resultUrls?: string[] };
+        const url = result.resultUrls?.[0];
+        if (!url) {
+          return { taskId, state: "failed", error: "success but no resultUrls" };
+        }
+        return { taskId, state: "success", url };
+      } catch (e) {
+        return {
+          taskId,
+          state: "failed",
+          error: e instanceof Error ? e.message : "result parse failed",
+        };
+      }
+    }
+    if (state === "failed") {
+      return { taskId, state: "failed", error: data.data?.failMsg || "unknown" };
+    }
+    // generating, queueing, etc.
+    return { taskId, state: "pending" };
+  } catch (e) {
+    return {
+      taskId,
+      state: "failed",
+      error: e instanceof Error ? e.message : "check failed",
+    };
+  }
 }
 
 /**

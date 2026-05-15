@@ -46,11 +46,15 @@ export default function ChatInterface({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streamingText]);
 
-  // 從 chat SSE 拿到 function_call params 後，用這個 API 實際打 KIE 生圖
+  // 從 chat SSE 拿到 function_call params 後，用「兩階段架構」呼叫 KIE
+  // step 1: submit → 拿到 taskIds（< 5s）
+  // step 2: poll 每 2s 一次直到所有 task done（每次 < 3s）
+  // 避免單一請求超過 Vercel 60s timeout
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function callGenerateImage(params: any) {
     try {
-      const res = await fetch(
+      // ─── Step 1: submit ───
+      const submitRes = await fetch(
         `/api/poc/generate-image?key=${encodeURIComponent(accessKey)}`,
         {
           method: "POST",
@@ -61,20 +65,73 @@ export default function ChatInterface({
           }),
         }
       );
-      const data = await res.json();
-      if (!res.ok) {
+      let submitData: { taskIds?: string[]; error?: string; debugPromptLength?: number };
+      try {
+        submitData = await submitRes.json();
+      } catch {
+        // Vercel timeout 或其他非 JSON response
         setPhase("error");
-        // 包含 debug 資訊方便回報問題
+        setErrorMsg(`提交失敗 (HTTP ${submitRes.status})：可能是 Vercel timeout`);
+        return;
+      }
+      if (!submitRes.ok || !submitData.taskIds || submitData.taskIds.length === 0) {
+        setPhase("error");
         const detail = [
-          data.error || "生圖失敗",
-          data.debugPromptLength
-            ? `\n\n[debug] prompt 長度=${data.debugPromptLength}`
+          submitData.error || "提交失敗",
+          submitData.debugPromptLength
+            ? `\n[debug] prompt 長度=${submitData.debugPromptLength}`
             : "",
         ].join("");
         setErrorMsg(detail);
         return;
       }
-      onImagesReady(data.urls);
+
+      const taskIds = submitData.taskIds;
+
+      // ─── Step 2: poll ───
+      // 每 2s 一次，最多 50 次（100s）
+      for (let attempt = 0; attempt < 50; attempt++) {
+        await new Promise((r) => setTimeout(r, 2000));
+
+        let pollData: {
+          results?: { taskId: string; state: string; url?: string; error?: string }[];
+          allDone?: boolean;
+          urls?: string[];
+        };
+        try {
+          const pollRes = await fetch(
+            `/api/poc/generate-image/poll?key=${encodeURIComponent(accessKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ taskIds }),
+            }
+          );
+          pollData = await pollRes.json();
+        } catch {
+          // 網路抖動就重試
+          continue;
+        }
+
+        if (pollData.allDone) {
+          const urls = pollData.urls || [];
+          if (urls.length === 0) {
+            const errors = (pollData.results || [])
+              .filter((r) => r.state === "failed")
+              .map((r) => `[${r.taskId.slice(0, 8)}] ${r.error || "unknown"}`)
+              .join("\n");
+            setPhase("error");
+            setErrorMsg(`所有生圖任務都失敗：\n${errors}`);
+            return;
+          }
+          onImagesReady(urls);
+          return;
+        }
+      }
+
+      // 100s 還沒完
+      setPhase("error");
+      setErrorMsg("生圖超過 100 秒未完成，可能 KIE 服務塞車，請稍後再試");
     } catch (e) {
       setPhase("error");
       setErrorMsg(e instanceof Error ? e.message : "連線錯誤");

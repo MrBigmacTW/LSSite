@@ -1,23 +1,26 @@
 /**
- * Z-Image 生圖 endpoint — 由 ChatInterface 在拿到 function_call 後呼叫
+ * Z-Image 提交端點（兩階段架構的 step 1）
  *
- * 為什麼從 chat SSE 拆出來：
- *   chat SSE 同時做「對話 + KIE 生圖」會逼近 Vercel Hobby 60s 上限，
- *   常常 timeout 卡在 loading。拆兩個請求各自有獨立 60s 預算。
+ * 只提交 3 個 KIE task，**不等待結果**，立刻回 taskIds。
+ * 前端拿到 taskIds 後輪詢 /api/poc/generate-image/poll 取結果。
+ *
+ * 為什麼拆兩階段：
+ *   KIE Z-Image 並發 3 張會跑 30-60s，超過 Vercel Hobby 60s timeout。
+ *   分成「提交 < 5s」+「輪詢每次 < 3s」就永遠不會 timeout。
  *
  * 接收：{ params, intake?: { shirtColor } }
- * 回傳：{ urls: string[], prompts: string[] }
+ * 回傳：{ taskIds: string[], prompts: string[] }
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
-import { generateMany } from "@/lib/poc/zimage";
+import { submitTask } from "@/lib/poc/zimage";
 import { buildZImagePrompt, type DesignParams } from "@/lib/poc/promptProcessor";
 import { consumeGenerationQuota, DailyLimitExceededError } from "@/lib/poc/globalLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Hobby plan 上限
+export const maxDuration = 30; // 提交 3 個 task 應該 < 10s
 
 export async function POST(req: NextRequest) {
   if (!isValidPocKey(getPocKey(req))) {
@@ -50,28 +53,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "配額檢查失敗" }, { status: 500 });
   }
 
-  // 三張各帶不同 variationIndex 確保構圖多樣性
   const prompts = [0, 1, 2].map((i) =>
     buildZImagePrompt(params, {
       shirtColor: intake.shirtColor,
       variationIndex: i,
     })
   );
-  console.log("[poc/generate-image] 3 variation prompts:");
-  prompts.forEach((p, i) => console.log(`  [${i}] ${p.length}ch: ${p.slice(0, 120)}...`));
+  console.log("[poc/generate-image] submitting 3 tasks:");
+  prompts.forEach((p, i) => console.log(`  [${i}] ${p.length}ch: ${p.slice(0, 100)}`));
 
+  // 並發提交（每個 createTask 約 1-2s）
   try {
-    const urls = await generateMany(prompts, 3);
-    return NextResponse.json({ urls, prompts });
+    const submitResults = await Promise.allSettled(prompts.map((p) => submitTask(p)));
+    const taskIds: string[] = [];
+    const errors: string[] = [];
+    submitResults.forEach((r, i) => {
+      if (r.status === "fulfilled") {
+        taskIds.push(r.value);
+      } else {
+        const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        errors.push(`[${i}] ${reason}`);
+        console.error(`[poc/generate-image] submit ${i} failed:`, reason);
+      }
+    });
+
+    if (taskIds.length === 0) {
+      return NextResponse.json(
+        {
+          error: `所有提交都失敗：${errors.join(" | ")}`,
+          debugPromptLength: prompts[0].length,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ taskIds, prompts });
   } catch (err) {
-    const detail = err instanceof Error ? err.message : "生圖失敗";
-    console.error("[poc/generate-image] failed:", detail);
     return NextResponse.json(
-      {
-        error: detail,
-        debugPromptLength: prompts[0]?.length || 0,
-        debugPromptSample: prompts[0]?.slice(0, 200),
-      },
+      { error: err instanceof Error ? err.message : "提交失敗" },
       { status: 500 }
     );
   }
