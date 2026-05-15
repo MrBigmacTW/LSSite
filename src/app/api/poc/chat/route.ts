@@ -19,9 +19,7 @@ import {
   looksLikeSummary,
   type ChatMessage,
 } from "@/lib/poc/gemini";
-import { generateMany } from "@/lib/poc/zimage";
-import { buildZImagePrompt, type DesignParams } from "@/lib/poc/promptProcessor";
-import { consumeGenerationQuota, DailyLimitExceededError } from "@/lib/poc/globalLimit";
+import type { DesignParams } from "@/lib/poc/promptProcessor";
 
 // 客戶是否說出「開始生圖」的明確信號
 // 含「片段觸發詞」與「短肯定詞」兩類
@@ -110,7 +108,9 @@ export async function POST(req: NextRequest) {
       const encoder = new TextEncoder();
       const send = (p: SsePayload) => controller.enqueue(encoder.encode(sseLine(p)));
 
-      // ── 強制生圖捷徑：跳過 AI 對話，直接 forceToolCall ──
+      // ── 強制生圖捷徑：跳過 AI 對話，直接 forceToolCall 拿 params ──
+      // ⚠️ 不再呼叫 KIE 生圖（避免單一請求超過 Vercel 60s timeout）
+      // 拿到 params 後 emit function_call → 前端再打 /api/poc/generate-image
       if (isForceGenerate) {
         send({ type: "tool_call_starting" });
         try {
@@ -127,30 +127,7 @@ export async function POST(req: NextRequest) {
           } else if (intake.textContent) {
             (params as Record<string, string>).text_overlay = intake.textContent;
           }
-          try {
-            await consumeGenerationQuota(3);
-          } catch (e) {
-            if (e instanceof DailyLimitExceededError) {
-              send({ type: "error", data: "今天的全站生圖額度已滿，請明天再來 🦞" });
-            } else {
-              send({ type: "error", data: "配額檢查失敗" });
-            }
-            send({ type: "done" });
-            controller.close();
-            return;
-          }
           send({ type: "function_call", data: { params } });
-          send({ type: "generating" });
-          const prompts = [0, 1, 2].map((i) =>
-            buildZImagePrompt(params as unknown as DesignParams, {
-              shirtColor: intake.shirtColor,
-              variationIndex: i,
-            })
-          );
-          console.log("[poc/chat] FORCE_GENERATE prompts:");
-          prompts.forEach((p, i) => console.log(`  [${i}] ${p}`));
-          const urls = await generateMany(prompts, 3);
-          send({ type: "images_ready", data: { urls, prompt: prompts[0] } });
         } catch (err) {
           send({
             type: "error",
@@ -255,6 +232,8 @@ export async function POST(req: NextRequest) {
         }
 
         // ── 3. Stream 結束後處理 function call ──
+        // ⚠️ 不再呼叫 KIE 生圖（避免單一 SSE 請求超過 Vercel 60s timeout）
+        // 拿到 params 後 emit function_call → 前端再打 /api/poc/generate-image
         if (toolCallName === "generate_design_images" && toolCallArgs) {
           let params: DesignParams;
           try {
@@ -266,54 +245,14 @@ export async function POST(req: NextRequest) {
             return;
           }
 
+          // 套用 intake 強制覆寫
+          if (intake.hasText === "no") {
+            params.text_overlay = "";
+          } else if (intake.textContent) {
+            params.text_overlay = intake.textContent;
+          }
+
           send({ type: "function_call", data: { id: toolCallId, params } });
-
-          // 配額（先扣 3）
-          try {
-            await consumeGenerationQuota(3);
-          } catch (e) {
-            if (e instanceof DailyLimitExceededError) {
-              send({
-                type: "error",
-                data: "今天的全站生圖額度已滿，請明天再來 🦞",
-              });
-            } else {
-              send({ type: "error", data: "配額檢查失敗" });
-            }
-            send({ type: "done" });
-            controller.close();
-            return;
-          }
-
-          send({ type: "generating" });
-
-          try {
-            // 客戶 intake 強制覆寫某些參數，避免 AI 自由發揮跑題
-            if (intake.hasText === "no") {
-              params.text_overlay = "";
-            } else if (intake.textContent) {
-              params.text_overlay = intake.textContent;
-            }
-            // 三張生圖各帶不同 variationIndex → 構圖多樣性（解決「三張過像」問題）
-            const prompts = [0, 1, 2].map((i) =>
-              buildZImagePrompt(params, {
-                shirtColor: intake.shirtColor,
-                variationIndex: i,
-              })
-            );
-            console.log("[poc/chat] Z-Image prompts (3 variations):");
-            prompts.forEach((p, i) => console.log(`  [${i}] ${p}`));
-            const urls = await generateMany(prompts, 3);
-            send({ type: "images_ready", data: { urls, prompt: prompts[0] } });
-          } catch (err) {
-            send({
-              type: "error",
-              data:
-                err instanceof Error
-                  ? `生圖失敗：${err.message}`
-                  : "生圖失敗，請稍後再試",
-            });
-          }
         }
 
         send({ type: "done" });

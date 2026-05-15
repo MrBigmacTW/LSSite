@@ -46,6 +46,34 @@ export default function ChatInterface({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streamingText]);
 
+  // 從 chat SSE 拿到 function_call params 後，用這個 API 實際打 KIE 生圖
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function callGenerateImage(params: any) {
+    try {
+      const res = await fetch(
+        `/api/poc/generate-image?key=${encodeURIComponent(accessKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            params,
+            intake: { shirtColor: intake.shirtColor },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setPhase("error");
+        setErrorMsg(data.error || "生圖失敗");
+        return;
+      }
+      onImagesReady(data.urls);
+    } catch (e) {
+      setPhase("error");
+      setErrorMsg(e instanceof Error ? e.message : "連線錯誤");
+    }
+  }
+
   async function send(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if (!text || isLocked) return;
@@ -106,14 +134,13 @@ export default function ChatInterface({
                 break;
               case "function_call":
                 // 完整 function 參數累積完成（stream 結束）
+                // 拆雙請求：chat SSE 結束後，前端用拿到的 params 再打 generate-image API
+                // （避免單一請求超過 Vercel 60s）
                 setGenerationCalled(true);
-                break;
-              case "generating":
                 setPhase("generating");
+                callGenerateImage(ev.data.params);
                 break;
-              case "images_ready":
-                onImagesReady(ev.data.urls);
-                return;
+              // "generating" / "images_ready" 已不再由 chat SSE 發送（改由 callGenerateImage 處理）
               case "error":
                 setPhase("error");
                 setErrorMsg(ev.data || "未知錯誤");
