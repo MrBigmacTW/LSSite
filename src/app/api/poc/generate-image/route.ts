@@ -50,21 +50,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "配額檢查失敗" }, { status: 500 });
   }
 
+  // 三張各帶不同 variationIndex 確保構圖多樣性
+  const prompts = [0, 1, 2].map((i) =>
+    buildZImagePrompt(params, {
+      shirtColor: intake.shirtColor,
+      variationIndex: i,
+    })
+  );
+  console.log("[poc/generate-image] 3 variation prompts:");
+  prompts.forEach((p, i) => console.log(`  [${i}] ${p.length}ch: ${p.slice(0, 120)}...`));
+
   try {
-    // 三張各帶不同 variationIndex 確保構圖多樣性
-    const prompts = [0, 1, 2].map((i) =>
-      buildZImagePrompt(params, {
-        shirtColor: intake.shirtColor,
-        variationIndex: i,
-      })
-    );
-    console.log("[poc/generate-image] 3 variation prompts:");
-    prompts.forEach((p, i) => console.log(`  [${i}] ${p}`));
     const urls = await generateMany(prompts, 3);
     return NextResponse.json({ urls, prompts });
   } catch (err) {
+    const detail = err instanceof Error ? err.message : "生圖失敗";
+    console.error("[poc/generate-image] failed:", detail);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "生圖失敗" },
+      {
+        error: detail,
+        debugPromptLength: prompts[0]?.length || 0,
+        debugPromptSample: prompts[0]?.slice(0, 200),
+      },
       { status: 500 }
     );
   }

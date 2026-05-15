@@ -64,7 +64,14 @@ export default function ChatInterface({
       const data = await res.json();
       if (!res.ok) {
         setPhase("error");
-        setErrorMsg(data.error || "生圖失敗");
+        // 包含 debug 資訊方便回報問題
+        const detail = [
+          data.error || "生圖失敗",
+          data.debugPromptLength
+            ? `\n\n[debug] prompt 長度=${data.debugPromptLength}`
+            : "",
+        ].join("");
+        setErrorMsg(detail);
         return;
       }
       onImagesReady(data.urls);
