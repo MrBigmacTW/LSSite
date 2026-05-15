@@ -6,10 +6,20 @@ import IntakeForm, { type IntakeAnswers } from "./components/IntakeForm";
 import ChatInterface from "./components/ChatInterface";
 import UploadArea from "./components/UploadArea";
 import GenerationResults from "./components/GenerationResults";
+import DesignEditor from "./components/DesignEditor";
+import TextDesignPicker from "./components/TextDesignPicker";
 import MockupPreview from "./components/MockupPreview";
 import { seedMessagesFromIntake, type Msg } from "@/lib/poc/chatSeed";
 
-type Mode = "landing" | "intake" | "chat" | "upload" | "results" | "mockup";
+type Mode =
+  | "landing"
+  | "intake"
+  | "chat"
+  | "upload"
+  | "text-design"  // Path C
+  | "results"      // Path A 第一次 3 候選選擇
+  | "editor"       // 設計編輯器 hub
+  | "mockup";
 
 interface Props {
   accessKey: string;
@@ -21,25 +31,31 @@ export default function StudioClient({ accessKey }: Props) {
   // 對話歷史 hoist 到此層，這樣「重新對話」回 chat 才不會被 ChatInterface 重置
   const [chatMessages, setChatMessages] = useState<Msg[]>([]);
   const [candidateUrls, setCandidateUrls] = useState<string[]>([]);
+  // 進入 editor 時的 design URL（從 results 選一張、或 upload 完直接帶來）
+  const [editorImageUrl, setEditorImageUrl] = useState<string | null>(null);
+  // 編輯器確認後 → mockup 的最終 design URL
   const [selectedDesignUrl, setSelectedDesignUrl] = useState<string | null>(null);
+  // 從哪條路徑進編輯器（決定「重做」按鈕往回去哪）
+  const [editorSource, setEditorSource] = useState<"chat" | "upload" | null>(null);
 
   function fullReset() {
     setMode("landing");
     setIntakeAnswers(null);
     setChatMessages([]);
     setCandidateUrls([]);
+    setEditorImageUrl(null);
     setSelectedDesignUrl(null);
+    setEditorSource(null);
   }
 
   function handleIntakeComplete(answers: IntakeAnswers) {
     setIntakeAnswers(answers);
-    setChatMessages(seedMessagesFromIntake(answers));  // 新對話 → 從 intake seed
+    setChatMessages(seedMessagesFromIntake(answers));
     setMode("chat");
   }
 
   function handleRedoFromResults() {
-    // 「都不滿意，重新對話」→ 回 chat、**保留對話歷史**
-    // append 一句 AI 過渡訊息讓客戶知道從哪接續
+    // 「都不滿意，重新對話」→ 回 chat、保留對話歷史
     setChatMessages((prev) => [
       ...prev,
       {
@@ -49,6 +65,17 @@ export default function StudioClient({ accessKey }: Props) {
       },
     ]);
     setMode("chat");
+  }
+
+  // 編輯器「重做」按鈕：依 editorSource 決定回哪
+  function handleEditorBack() {
+    if (editorSource === "chat") {
+      handleRedoFromResults();
+    } else if (editorSource === "upload") {
+      setMode("upload");
+    } else {
+      setMode("landing");
+    }
   }
 
   // intake 偏好顏色 → mockup 預覽預設顏色
@@ -83,6 +110,7 @@ export default function StudioClient({ accessKey }: Props) {
           <LandingScreen
             onPickChat={() => setMode("intake")}
             onPickUpload={() => setMode("upload")}
+            onPickText={() => setMode("text-design")}
           />
         )}
 
@@ -108,9 +136,23 @@ export default function StudioClient({ accessKey }: Props) {
           <UploadArea
             accessKey={accessKey}
             onUploaded={(url) => {
+              // 上傳完進編輯器（不直接跳 mockup），客戶可選「直接用」或「AI 改圖」
+              setEditorImageUrl(url);
+              setEditorSource("upload");
+              setMode("editor");
+            }}
+          />
+        )}
+
+        {mode === "text-design" && (
+          <TextDesignPicker
+            accessKey={accessKey}
+            onComplete={(url) => {
+              // 純文字設計直接跳 mockup（不過編輯器，因為文字不該 AI 改）
               setSelectedDesignUrl(url);
               setMode("mockup");
             }}
+            onBack={() => setMode("landing")}
           />
         )}
 
@@ -118,10 +160,24 @@ export default function StudioClient({ accessKey }: Props) {
           <GenerationResults
             urls={candidateUrls}
             onPick={(url) => {
-              setSelectedDesignUrl(url);
-              setMode("mockup");
+              // 選完 3 候選 → 進編輯器（可繼續修或直接到 mockup）
+              setEditorImageUrl(url);
+              setEditorSource("chat");
+              setMode("editor");
             }}
             onRedo={handleRedoFromResults}
+          />
+        )}
+
+        {mode === "editor" && editorImageUrl && (
+          <DesignEditor
+            accessKey={accessKey}
+            initialImageUrl={editorImageUrl}
+            onProceed={(finalUrl) => {
+              setSelectedDesignUrl(finalUrl);
+              setMode("mockup");
+            }}
+            onBack={handleEditorBack}
           />
         )}
 
