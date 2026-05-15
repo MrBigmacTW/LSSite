@@ -7,7 +7,7 @@ import ChatInterface from "./components/ChatInterface";
 import UploadArea from "./components/UploadArea";
 import GenerationResults from "./components/GenerationResults";
 import DesignEditor from "./components/DesignEditor";
-import TextDesignPicker from "./components/TextDesignPicker";
+import TextMockup from "./components/TextMockup";
 import MockupPreview from "./components/MockupPreview";
 import { seedMessagesFromIntake, type Msg } from "@/lib/poc/chatSeed";
 
@@ -145,13 +145,9 @@ export default function StudioClient({ accessKey }: Props) {
         )}
 
         {mode === "text-design" && (
-          <TextDesignPicker
+          // T 恤即時預覽 + 字體控制台同框（純前端 SVG，不走 mockup API）
+          <TextMockup
             accessKey={accessKey}
-            onComplete={(url) => {
-              // 純文字設計直接跳 mockup（不過編輯器，因為文字不該 AI 改）
-              setSelectedDesignUrl(url);
-              setMode("mockup");
-            }}
             onBack={() => setMode("landing")}
           />
         )}

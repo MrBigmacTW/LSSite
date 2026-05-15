@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@300;400&display=swap');
 
+/* ── 文字簽名專用：20 個帥字體（display: swap 異步載入） ── */
+/* 英文 display fonts (10) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Pacifico&family=Bungee&family=Lobster&family=Permanent+Marker&family=Creepster&family=Faster+One&family=Audiowide&family=Press+Start+2P&family=Major+Mono+Display&display=swap');
+/* CJK / 中文 display fonts (8) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+KuaiLe&family=Long+Cang&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&display=swap');
+
 @import "tailwindcss";
 
 /* ── Tailwind v4 Theme ── */
