@@ -2,14 +2,14 @@
 
 /**
  * Path C：文字簽名 — T 恤即時預覽 + 字體選擇器同框
+ * 支援 free transform：拖曳移動 / 拉角縮放 / 旋轉
  *
- * 不上傳、不打 Sharp、不打 storage。
- * 純 SVG 把文字渲染進 T 恤模板的 printArea，所有調整即時反應。
+ * 純前端 SVG，不上傳、不打 Sharp、不打 storage。
  *
  * 字體共 20 種：10 英文 display + 8 中文 + 2 既有（Outfit / DM Mono）
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   POC_TEMPLATES,
   DEFAULT_TEMPLATE_ID,
@@ -19,14 +19,14 @@ import {
 
 interface FontOption {
   id: string;
-  label: string;        // 字體名（會用該字體呈現）
-  family: string;       // CSS / SVG font-family
+  label: string;
+  family: string;
   weight?: string;
   category: "english" | "chinese" | "mono";
 }
 
 const FONTS: FontOption[] = [
-  // ── 英文 display (10) ──
+  // 英文 display (10)
   { id: "bebas", label: "BEBAS NEUE", family: "'Bebas Neue', sans-serif", category: "english" },
   { id: "pacifico", label: "Pacifico", family: "'Pacifico', cursive", category: "english" },
   { id: "bungee", label: "BUNGEE", family: "'Bungee', cursive", category: "english" },
@@ -37,8 +37,7 @@ const FONTS: FontOption[] = [
   { id: "audiowide", label: "Audiowide", family: "'Audiowide', cursive", category: "english" },
   { id: "8bit", label: "8 BIT", family: "'Press Start 2P', cursive", category: "english" },
   { id: "major-mono", label: "MAJOR MONO", family: "'Major Mono Display', monospace", category: "english" },
-
-  // ── 中文 / CJK display (8) ──
+  // 中文 display (8)
   { id: "noto-serif-tc", label: "明體", family: "'Noto Serif TC', serif", weight: "700", category: "chinese" },
   { id: "zcool-xiaowei", label: "小薇", family: "'ZCOOL XiaoWei', serif", category: "chinese" },
   { id: "zcool-qingke", label: "硬筆黃油", family: "'ZCOOL QingKe HuangYou', cursive", category: "chinese" },
@@ -47,8 +46,7 @@ const FONTS: FontOption[] = [
   { id: "ma-shan", label: "馬善政楷", family: "'Ma Shan Zheng', cursive", category: "chinese" },
   { id: "liu-jian", label: "劉建毛草", family: "'Liu Jian Mao Cao', cursive", category: "chinese" },
   { id: "zhi-mang", label: "志莽行書", family: "'Zhi Mang Xing', cursive", category: "chinese" },
-
-  // ── 既有 sans (2) ──
+  // 既有 (2)
   { id: "outfit", label: "Outfit", family: "'Outfit', sans-serif", weight: "700", category: "english" },
   { id: "dm-mono", label: "DM MONO", family: "'DM Mono', monospace", category: "mono" },
 ];
@@ -68,8 +66,21 @@ const TEMPLATE_W = 1086;
 const TEMPLATE_H = 1448;
 
 interface Props {
-  accessKey: string;  // 暫未使用（未來 download / share 用）
+  accessKey: string;
   onBack: () => void;
+}
+
+type InteractionMode = "none" | "drag" | "resize" | "rotate";
+
+interface InteractionStart {
+  mouseX: number;
+  mouseY: number;
+  offsetX: number;
+  offsetY: number;
+  fontSize: number;
+  rotation: number;
+  initialDistance: number;
+  initialAngle: number;
 }
 
 export default function TextMockup({ onBack }: Props) {
@@ -80,21 +91,147 @@ export default function TextMockup({ onBack }: Props) {
   const [colorTeeId, setColorTeeId] = useState(DEFAULT_COLOR_ID);
   const [positionId, setPositionId] = useState(DEFAULT_POSITION_ID);
 
+  // ── Free transform 狀態 ──
+  const [textOffset, setTextOffset] = useState({ x: 0, y: 0 });
+  const [textRotation, setTextRotation] = useState(0);  // degrees
+  const [interaction, setInteraction] = useState<InteractionMode>("none");
+
+  const startState = useRef<InteractionStart | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
   const font = FONTS.find((f) => f.id === fontId)!;
   const color = COLORS.find((c) => c.id === colorId)!;
   const template = POC_TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE_ID)!;
   const teeColor = template.colors.find((c) => c.id === colorTeeId)!;
   const position = template.positions.find((p) => p.id === positionId)!;
 
+  // 切換印製位置 → 重置 free transform
+  function selectPosition(newId: string) {
+    setPositionId(newId);
+    setTextOffset({ x: 0, y: 0 });
+    setTextRotation(0);
+  }
+
   // 文字按 \n 斷行
   const lines = text.split("\n").filter((l) => l.length > 0);
   const lineHeight = fontSize * 1.2;
-  const totalHeight = lineHeight * lines.length;
-  // SVG 內 printArea 的中心
-  const cx = position.printArea.x + position.printArea.width / 2;
-  const cy = position.printArea.y + position.printArea.height / 2;
-  // 第一行起始 y（dominant-baseline central + 多行垂直置中）
-  const firstY = cy - totalHeight / 2 + lineHeight / 2;
+  const totalHeight = lineHeight * Math.max(lines.length, 1);
+
+  // 文字粗略 bbox（畫面座標相對 design center）
+  // 寬度按字數估算（中英混雜不易精準）；用於放置 handle
+  const maxLineLen = Math.max(...lines.map((l) => l.length || 1), 1);
+  const estimatedWidth = maxLineLen * fontSize * 0.6;
+  const estimatedHeight = totalHeight;
+
+  // 預設位置 printArea 的中心（screen coords in SVG units）
+  const baseCx = position.printArea.x + position.printArea.width / 2;
+  const baseCy = position.printArea.y + position.printArea.height / 2;
+  // 加上 free offset 後的 design center
+  const designCx = baseCx + textOffset.x;
+  const designCy = baseCy + textOffset.y;
+
+  // 把畫面座標換成 SVG viewBox 座標
+  function clientToSvg(clientX: number, clientY: number) {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * TEMPLATE_W,
+      y: ((clientY - rect.top) / rect.height) * TEMPLATE_H,
+    };
+  }
+
+  // 開始任何 interaction
+  function beginInteraction(
+    mode: Exclude<InteractionMode, "none">,
+    e: React.PointerEvent
+  ) {
+    e.stopPropagation();
+    e.preventDefault();
+    const pt = clientToSvg(e.clientX, e.clientY);
+    startState.current = {
+      mouseX: pt.x,
+      mouseY: pt.y,
+      offsetX: textOffset.x,
+      offsetY: textOffset.y,
+      fontSize,
+      rotation: textRotation,
+      initialDistance: Math.hypot(pt.x - designCx, pt.y - designCy),
+      initialAngle: (Math.atan2(pt.y - designCy, pt.x - designCx) * 180) / Math.PI,
+    };
+    setInteraction(mode);
+    try {
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (interaction === "none" || !startState.current) return;
+    const pt = clientToSvg(e.clientX, e.clientY);
+    const s = startState.current;
+
+    if (interaction === "drag") {
+      setTextOffset({
+        x: s.offsetX + (pt.x - s.mouseX),
+        y: s.offsetY + (pt.y - s.mouseY),
+      });
+    } else if (interaction === "resize") {
+      const center = {
+        x: position.printArea.x + position.printArea.width / 2 + s.offsetX,
+        y: position.printArea.y + position.printArea.height / 2 + s.offsetY,
+      };
+      const dist = Math.hypot(pt.x - center.x, pt.y - center.y);
+      const ratio = dist / Math.max(s.initialDistance, 1);
+      const next = Math.max(40, Math.min(800, s.fontSize * ratio));
+      setFontSize(Math.round(next));
+    } else if (interaction === "rotate") {
+      const center = {
+        x: position.printArea.x + position.printArea.width / 2 + s.offsetX,
+        y: position.printArea.y + position.printArea.height / 2 + s.offsetY,
+      };
+      const angle = (Math.atan2(pt.y - center.y, pt.x - center.x) * 180) / Math.PI;
+      let next = s.rotation + (angle - s.initialAngle);
+      // 接近 0 / 90 / 180 度時 snap 一下
+      const snapTargets = [-180, -90, 0, 90, 180];
+      for (const t of snapTargets) {
+        if (Math.abs(next - t) < 5) next = t;
+      }
+      setTextRotation(next);
+    }
+  }
+
+  function endInteraction() {
+    setInteraction("none");
+    startState.current = null;
+  }
+
+  function resetTransform() {
+    setTextOffset({ x: 0, y: 0 });
+    setTextRotation(0);
+  }
+
+  // ── Handle 位置計算（旋轉後的 bbox 角點） ──
+  const cosR = Math.cos((textRotation * Math.PI) / 180);
+  const sinR = Math.sin((textRotation * Math.PI) / 180);
+  // 文字本地 bbox 右下角
+  const localBR = { x: estimatedWidth / 2, y: estimatedHeight / 2 };
+  const brScreen = {
+    x: designCx + (localBR.x * cosR - localBR.y * sinR),
+    y: designCy + (localBR.x * sinR + localBR.y * cosR),
+  };
+  // 文字本地 bbox 上方中央 + 60 px 為旋轉 handle 起點
+  const localTop = { x: 0, y: -estimatedHeight / 2 - 70 };
+  const rotateScreen = {
+    x: designCx + (localTop.x * cosR - localTop.y * sinR),
+    y: designCy + (localTop.x * sinR + localTop.y * cosR),
+  };
+  // 旋轉桿線的另一端（接到 bbox 頂端中央）
+  const rotateLineBase = {
+    x: designCx + (0 * cosR - -estimatedHeight / 2 * sinR),
+    y: designCy + (0 * sinR + -estimatedHeight / 2 * cosR),
+  };
 
   return (
     <div className="max-w-7xl mx-auto pt-2">
@@ -103,17 +240,17 @@ export default function TextMockup({ onBack }: Props) {
           文字簽名
         </h2>
         <p className="text-fg2 text-xs">
-          打字、選字體、配色 — T 恤即時預覽
+          選字、配色、然後直接拖曳 / 拉角 / 旋轉
         </p>
       </div>
 
       <div className="grid lg:grid-cols-[400px_1fr] gap-6">
-        {/* 左側：控制台 */}
+        {/* ── 左側控制台 ── */}
         <div className="bg-bg2 border border-fg3/20 rounded-2xl p-5 space-y-4 lg:max-h-[80vh] lg:overflow-y-auto">
           {/* 文字內容 */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
-              文字內容（換行用 Enter）
+              文字（換行用 Enter）
             </p>
             <textarea
               value={text}
@@ -151,12 +288,12 @@ export default function TextMockup({ onBack }: Props) {
             </div>
           </div>
 
-          {/* 字體（20 個） */}
+          {/* 字體 */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
               字體（{FONTS.length} 種）
             </p>
-            <div className="grid grid-cols-2 gap-1.5 max-h-[300px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
               {FONTS.map((f) => {
                 const active = fontId === f.id;
                 return (
@@ -172,10 +309,7 @@ export default function TextMockup({ onBack }: Props) {
                   >
                     <div
                       className={`text-base ${active ? "text-accent" : "text-fg"} truncate`}
-                      style={{
-                        fontFamily: f.family,
-                        fontWeight: f.weight,
-                      }}
+                      style={{ fontFamily: f.family, fontWeight: f.weight }}
                     >
                       {f.label}
                     </div>
@@ -213,15 +347,15 @@ export default function TextMockup({ onBack }: Props) {
             </div>
           </div>
 
-          {/* 字級 */}
+          {/* 字級（也可拉角縮放） */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
-              字級：{fontSize}px
+              字級：{fontSize}px <span className="text-fg3">（也可拉右下角縮放）</span>
             </p>
             <input
               type="range"
-              min={60}
-              max={400}
+              min={40}
+              max={500}
               step={10}
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
@@ -229,10 +363,10 @@ export default function TextMockup({ onBack }: Props) {
             />
           </div>
 
-          {/* 印製位置（A-F） */}
+          {/* 印製位置 — 等同於「重置位置到」 */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
-              印製位置
+              起始位置（會重置移動 / 旋轉）
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {template.positions.map((p) => {
@@ -240,16 +374,12 @@ export default function TextMockup({ onBack }: Props) {
                 return (
                   <button
                     key={p.id}
-                    onClick={() => setPositionId(p.id)}
+                    onClick={() => selectPosition(p.id)}
                     className={`p-2 rounded-lg border text-left transition ${
                       active ? "border-accent bg-accent/10" : "border-fg3/30 bg-bg3/40 hover:border-fg2"
                     }`}
                   >
-                    <div
-                      className={`font-display text-sm font-bold ${
-                        active ? "text-accent" : "text-fg"
-                      }`}
-                    >
+                    <div className={`font-display text-sm font-bold ${active ? "text-accent" : "text-fg"}`}>
                       {p.label}
                     </div>
                     <div className="text-[10px] font-mono text-fg3">{p.sizeCm}</div>
@@ -259,7 +389,21 @@ export default function TextMockup({ onBack }: Props) {
             </div>
           </div>
 
-          {/* 操作按鈕 */}
+          {/* 變換狀態 + 重置 */}
+          <div className="bg-bg3/50 rounded-lg p-3 space-y-2">
+            <div className="flex justify-between text-xs font-mono text-fg2">
+              <span>位移：({Math.round(textOffset.x)}, {Math.round(textOffset.y)})</span>
+              <span>旋轉：{Math.round(textRotation)}°</span>
+            </div>
+            <button
+              onClick={resetTransform}
+              disabled={textOffset.x === 0 && textOffset.y === 0 && textRotation === 0}
+              className="w-full px-3 py-1.5 bg-bg2 border border-fg3/30 rounded text-xs font-mono text-fg2 hover:border-accent hover:text-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ↻ 重置位置 / 旋轉
+            </button>
+          </div>
+
           <div className="pt-2 border-t border-fg3/20">
             <button
               onClick={onBack}
@@ -270,13 +414,19 @@ export default function TextMockup({ onBack }: Props) {
           </div>
         </div>
 
-        {/* 右側：T 恤即時預覽 */}
+        {/* ── 右側 T 恤即時預覽 ── */}
         <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4 md:p-6 flex items-start justify-center">
-          <div className="w-full max-w-2xl relative">
+          <div className="w-full max-w-2xl">
             <svg
+              ref={svgRef}
               viewBox={`0 0 ${TEMPLATE_W} ${TEMPLATE_H}`}
-              className="w-full h-auto bg-bg3 rounded-xl"
+              className="w-full h-auto bg-bg3 rounded-xl select-none"
               preserveAspectRatio="xMidYMid meet"
+              onPointerMove={handlePointerMove}
+              onPointerUp={endInteraction}
+              onPointerLeave={endInteraction}
+              onPointerCancel={endInteraction}
+              style={{ touchAction: "none" }}
             >
               {/* T 恤底圖 */}
               <image
@@ -286,41 +436,113 @@ export default function TextMockup({ onBack }: Props) {
                 width={TEMPLATE_W}
                 height={TEMPLATE_H}
               />
-              {/* printArea 框（半透明虛線提示） */}
+              {/* 印製範圍提示框 */}
               <rect
                 x={position.printArea.x}
                 y={position.printArea.y}
                 width={position.printArea.width}
                 height={position.printArea.height}
                 fill="none"
-                stroke="rgba(232, 67, 42, 0.4)"
+                stroke="rgba(232, 67, 42, 0.35)"
                 strokeWidth="3"
                 strokeDasharray="12 8"
               />
-              {/* 文字（多行） */}
+
+              {/* 文字（旋轉但不縮放，scale 由 fontSize 直接控制） */}
               {lines.length > 0 && (
-                <g>
-                  {lines.map((line, i) => (
-                    <text
-                      key={i}
-                      x={cx}
-                      y={firstY + i * lineHeight}
-                      fontFamily={font.family}
-                      fontWeight={font.weight || "400"}
-                      fontSize={fontSize}
-                      fill={color.value}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                    >
-                      {line}
-                    </text>
-                  ))}
+                <g
+                  transform={`translate(${designCx}, ${designCy}) rotate(${textRotation})`}
+                  onPointerDown={(e) => beginInteraction("drag", e)}
+                  style={{ cursor: interaction === "drag" ? "grabbing" : "grab" }}
+                >
+                  {lines.map((line, i) => {
+                    const y = -((lines.length - 1) * lineHeight) / 2 + i * lineHeight;
+                    return (
+                      <text
+                        key={i}
+                        x={0}
+                        y={y}
+                        fontFamily={font.family}
+                        fontWeight={font.weight || "400"}
+                        fontSize={fontSize}
+                        fill={color.value}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                      >
+                        {line}
+                      </text>
+                    );
+                  })}
                 </g>
               )}
+
+              {/* ── Handles（旋轉桿 + 縮放角） ── */}
+              {lines.length > 0 && (
+                <g pointerEvents="all">
+                  {/* 旋轉桿線 */}
+                  <line
+                    x1={rotateLineBase.x}
+                    y1={rotateLineBase.y}
+                    x2={rotateScreen.x}
+                    y2={rotateScreen.y}
+                    stroke="#E8432A"
+                    strokeWidth="3"
+                    strokeDasharray="6 4"
+                  />
+                  {/* 旋轉 handle */}
+                  <circle
+                    cx={rotateScreen.x}
+                    cy={rotateScreen.y}
+                    r={28}
+                    fill="#E8432A"
+                    stroke="white"
+                    strokeWidth={4}
+                    style={{ cursor: "grab" }}
+                    onPointerDown={(e) => beginInteraction("rotate", e)}
+                  />
+                  <text
+                    x={rotateScreen.x}
+                    y={rotateScreen.y}
+                    fill="white"
+                    fontSize={28}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    pointerEvents="none"
+                  >
+                    ↻
+                  </text>
+
+                  {/* 縮放 handle (右下角) */}
+                  <rect
+                    x={brScreen.x - 22}
+                    y={brScreen.y - 22}
+                    width={44}
+                    height={44}
+                    rx={6}
+                    fill="#E8432A"
+                    stroke="white"
+                    strokeWidth={4}
+                    style={{ cursor: "nwse-resize" }}
+                    onPointerDown={(e) => beginInteraction("resize", e)}
+                  />
+                  <text
+                    x={brScreen.x}
+                    y={brScreen.y}
+                    fill="white"
+                    fontSize={26}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    pointerEvents="none"
+                  >
+                    ⤡
+                  </text>
+                </g>
+              )}
+
               {/* 浮水印（蓋在 printArea 內） */}
               <g
                 transform={`translate(${position.printArea.x},${position.printArea.y})`}
-                opacity="0.25"
+                opacity="0.18"
                 pointerEvents="none"
               >
                 <g
@@ -340,22 +562,11 @@ export default function TextMockup({ onBack }: Props) {
                   >
                     LOBSTER
                   </text>
-                  <text
-                    x={position.printArea.width / 2}
-                    y={position.printArea.height / 2 + Math.min(position.printArea.width, position.printArea.height) * 0.12}
-                    fontFamily="monospace"
-                    fontSize={Math.min(position.printArea.width, position.printArea.height) * 0.07}
-                    fill="white"
-                    textAnchor="middle"
-                    letterSpacing="3"
-                  >
-                    · PREVIEW ·
-                  </text>
                 </g>
               </g>
             </svg>
             <p className="text-center text-xs font-mono text-fg3 mt-3">
-              虛線框 = 印製範圍（實際印製不會出現虛線）
+              💡 拖曳文字移動 · 拉右下紅角縮放 · 拉上方圓圈旋轉（接近 0/90 度會自動 snap）
             </p>
           </div>
         </div>
