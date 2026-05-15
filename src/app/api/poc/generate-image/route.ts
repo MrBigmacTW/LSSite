@@ -62,20 +62,23 @@ export async function POST(req: NextRequest) {
   console.log("[poc/generate-image] submitting 3 tasks:");
   prompts.forEach((p, i) => console.log(`  [${i}] ${p.length}ch: ${p.slice(0, 100)}`));
 
-  // 並發提交（每個 createTask 約 1-2s）
+  // 序列提交（每張間隔 1.5s）— KIE 並發 3 個會被 rate limit 全部 0-credit fail
+  // 序列總時間約 3 * (2s submit + 1.5s sleep) = 10s，仍在 maxDuration 30s 內
   try {
-    const submitResults = await Promise.allSettled(prompts.map((p) => submitTask(p)));
     const taskIds: string[] = [];
     const errors: string[] = [];
-    submitResults.forEach((r, i) => {
-      if (r.status === "fulfilled") {
-        taskIds.push(r.value);
-      } else {
-        const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+    for (let i = 0; i < prompts.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const taskId = await submitTask(prompts[i]);
+        taskIds.push(taskId);
+        console.log(`[poc/generate-image] submit ${i + 1}/${prompts.length} → ${taskId.slice(0, 8)}`);
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : String(e);
         errors.push(`[${i}] ${reason}`);
         console.error(`[poc/generate-image] submit ${i} failed:`, reason);
       }
-    });
+    }
 
     if (taskIds.length === 0) {
       return NextResponse.json(

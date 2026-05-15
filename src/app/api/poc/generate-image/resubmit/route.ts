@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // 失敗任務通常因為 KIE 短時間內被打太多次，先等 2s 給服務喘息
+    await new Promise((r) => setTimeout(r, 2000));
     const taskId = await submitTask(prompt);
     console.log(`[poc/resubmit] new taskId: ${taskId}`);
     return NextResponse.json({ taskId });
