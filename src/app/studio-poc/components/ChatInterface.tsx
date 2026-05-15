@@ -95,26 +95,80 @@ export default function ChatInterface({
         return;
       }
 
-      const taskIds = submitData.taskIds;
+      const initialTaskIds: string[] = submitData.taskIds;
+      const prompts: string[] = (submitData as { prompts?: string[] }).prompts || [];
+      const TOTAL = initialTaskIds.length;
+      const MAX_RETRIES_PER_PROMPT = 2;
+
       setPollProgress({
         done: 0,
         failed: 0,
-        total: taskIds.length,
+        total: TOTAL,
         elapsed: 0,
-        states: taskIds.map(() => "pending"),
+        states: initialTaskIds.map(() => "pending"),
       });
 
-      // ─── Step 2: poll ───
-      // 每 2s 一次，最多 90 次（180s）
+      // ─── Step 2: poll + auto-retry ───
+      // 每個 prompt 對應一個 slot；slot 內 taskId 失敗會用同 prompt resubmit
+      // slot[i] = { promptIdx, taskId, retries, finalUrl, finalError }
+      type Slot = {
+        promptIdx: number;
+        taskId: string;
+        retries: number;
+        url?: string;
+        error?: string;
+      };
+      const slots: Slot[] = initialTaskIds.map((id, i) => ({
+        promptIdx: i,
+        taskId: id,
+        retries: 0,
+      }));
+
+      async function resubmitPrompt(promptIdx: number): Promise<string | null> {
+        try {
+          const res = await fetch(
+            `/api/poc/generate-image/resubmit?key=${encodeURIComponent(accessKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: prompts[promptIdx] }),
+            }
+          );
+          const data = await res.json();
+          if (!res.ok || !data.taskId) return null;
+          return data.taskId as string;
+        } catch {
+          return null;
+        }
+      }
+
       const MAX_ATTEMPTS = 90;
       const startTime = Date.now();
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         await new Promise((r) => setTimeout(r, 2000));
 
+        const activeTaskIds = slots
+          .filter((s) => !s.url && !s.error)
+          .map((s) => s.taskId);
+
+        if (activeTaskIds.length === 0) {
+          // 所有 slot 都已敲定（成功 / 永久失敗）
+          const urls = slots.filter((s) => s.url).map((s) => s.url!);
+          if (urls.length === 0) {
+            const errors = slots
+              .filter((s) => s.error)
+              .map((s, i) => `[#${i + 1}] ${s.error}`)
+              .join("\n");
+            setPhase("error");
+            setErrorMsg(`所有生圖任務都失敗（含 retry）：\n${errors}`);
+            return;
+          }
+          onImagesReady(urls);
+          return;
+        }
+
         let pollData: {
           results?: { taskId: string; state: string; url?: string; error?: string }[];
-          allDone?: boolean;
-          urls?: string[];
         };
         try {
           const pollRes = await fetch(
@@ -122,48 +176,66 @@ export default function ChatInterface({
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ taskIds }),
+              body: JSON.stringify({ taskIds: activeTaskIds }),
             }
           );
           pollData = await pollRes.json();
         } catch {
-          // 網路抖動就重試
-          continue;
+          continue; // 網路抖動就重試
         }
 
         const results = pollData.results || [];
-        const states = results.map((r) => r.state);
-        const done = results.filter((r) => r.state === "success").length;
-        const failed = results.filter((r) => r.state === "failed").length;
-        const urls = pollData.urls || [];
+        // 把 results 對應回 slots，更新狀態 + 失敗 slot 自動 resubmit
+        for (const r of results) {
+          const slot = slots.find((s) => s.taskId === r.taskId);
+          if (!slot) continue;
+          if (r.state === "success" && r.url) {
+            slot.url = r.url;
+          } else if (r.state === "failed") {
+            if (slot.retries < MAX_RETRIES_PER_PROMPT) {
+              slot.retries += 1;
+              console.log(
+                `[poll] slot ${slot.promptIdx} task ${slot.taskId.slice(0, 8)} failed, resubmitting (retry ${slot.retries}/${MAX_RETRIES_PER_PROMPT})`
+              );
+              const newTaskId = await resubmitPrompt(slot.promptIdx);
+              if (newTaskId) {
+                slot.taskId = newTaskId;
+              } else {
+                // resubmit 都失敗 → 標永久失敗
+                slot.error = `${r.error || "unknown"} (resubmit 失敗)`;
+              }
+            } else {
+              slot.error = `${r.error || "unknown"} (retry ${slot.retries} 次仍失敗)`;
+            }
+          }
+        }
+
+        // 更新 UI 進度
+        const stateMap: string[] = slots.map((s) =>
+          s.url ? "success" : s.error ? "failed" : "pending"
+        );
+        const done = slots.filter((s) => s.url).length;
+        const failed = slots.filter((s) => s.error).length;
         setPollProgress({
           done,
           failed,
-          total: taskIds.length,
+          total: TOTAL,
           elapsed: Math.round((Date.now() - startTime) / 1000),
-          states,
+          states: stateMap,
         });
-        setPartialUrls(urls);
-
-        if (pollData.allDone) {
-          if (urls.length === 0) {
-            const errors = results
-              .filter((r) => r.state === "failed")
-              .map((r) => `[${r.taskId.slice(0, 8)}] ${r.error || "unknown"}`)
-              .join("\n");
-            setPhase("error");
-            setErrorMsg(`所有生圖任務都失敗：\n${errors}`);
-            return;
-          }
-          onImagesReady(urls);
-          return;
-        }
+        setPartialUrls(slots.filter((s) => s.url).map((s) => s.url!));
       }
 
       // 180s 還沒完
+      const finalUrls = slots.filter((s) => s.url).map((s) => s.url!);
+      if (finalUrls.length > 0) {
+        // 至少有一張 → 直接給客戶看
+        onImagesReady(finalUrls);
+        return;
+      }
       setPhase("error");
       setErrorMsg(
-        `生圖超過 ${(MAX_ATTEMPTS * 2)} 秒未完成（KIE 塞車），完成 ${pollProgress.done}/${pollProgress.total}。請稍後再試或選擇已完成的 ${pollProgress.done} 張。`
+        `生圖超過 ${MAX_ATTEMPTS * 2} 秒未完成（KIE 塞車），全部失敗。請稍後再試。`
       );
     } catch (e) {
       setPhase("error");

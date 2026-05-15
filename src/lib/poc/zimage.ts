@@ -104,10 +104,23 @@ export async function generateOne(prompt: string): Promise<string> {
 /**
  * 只提交 task，不等結果。回傳 taskId。
  * 給「兩階段架構」用：先提交，前端再 poll 狀態。
+ *
+ * 內建 retry：第一次失敗會等 2s 再試 1 次（KIE submit 偶發 5xx）
  */
-export async function submitTask(prompt: string): Promise<string> {
+export async function submitTask(prompt: string, maxRetries = 1): Promise<string> {
   if (!KIE_API_KEY) throw new Error("KIE_API_KEY not configured");
-  return createTask(prompt);
+
+  let lastError: Error | null = null;
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await createTask(prompt);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.warn(`[zimage] submitTask attempt ${i + 1}/${maxRetries + 1} failed:`, lastError.message);
+      if (i < maxRetries) await sleep(2000);
+    }
+  }
+  throw lastError || new Error("submitTask failed");
 }
 
 /**
