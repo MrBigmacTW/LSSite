@@ -47,27 +47,34 @@ interface RecordInfoResp {
   };
 }
 
-async function createEditTask(
+/**
+ * 建立 Flux Kontext 任務
+ * - inputImage 有給 → image-to-image（編輯模式）
+ * - inputImage 不給 → text-to-image（純文字生圖，可當 z-image 的 fallback）
+ */
+async function createFluxTask(
   prompt: string,
-  inputImage: string,
+  inputImage: string | null,
   model: FluxModel = "flux-kontext-pro"
 ): Promise<string> {
+  const body: Record<string, unknown> = {
+    prompt,
+    aspectRatio: "1:1",
+    outputFormat: "jpeg",
+    model,
+    enableTranslation: true,
+    promptUpsampling: false,
+    safetyTolerance: 2,
+  };
+  if (inputImage) body.inputImage = inputImage;
+
   const res = await fetch(FLUX_GENERATE_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${KIE_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      prompt,
-      inputImage,
-      aspectRatio: "1:1",
-      outputFormat: "jpeg",
-      model,
-      enableTranslation: true, // 允許中文 prompt 自動翻譯
-      promptUpsampling: false,
-      safetyTolerance: 2,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = (await res.json()) as CreateTaskResp;
@@ -75,6 +82,15 @@ async function createEditTask(
     throw new Error(`Flux createTask failed: ${data.msg || "unknown"}`);
   }
   return data.data.taskId;
+}
+
+// 對外保持原本介面（向後相容）
+async function createEditTask(
+  prompt: string,
+  inputImage: string,
+  model: FluxModel = "flux-kontext-pro"
+): Promise<string> {
+  return createFluxTask(prompt, inputImage, model);
 }
 
 async function pollEditTask(taskId: string): Promise<string> {
@@ -112,6 +128,19 @@ export async function editOne(
 ): Promise<string> {
   if (!KIE_API_KEY) throw new Error("KIE_API_KEY not configured");
   const taskId = await createEditTask(prompt, inputImage, model);
+  return pollEditTask(taskId);
+}
+
+/**
+ * Flux text-to-image（無 inputImage）— 給 z-image 塞車時的 fallback
+ * 一張、submit + poll inline
+ */
+export async function generateFluxText(
+  prompt: string,
+  model: FluxModel = "flux-kontext-pro"
+): Promise<string> {
+  if (!KIE_API_KEY) throw new Error("KIE_API_KEY not configured");
+  const taskId = await createFluxTask(prompt, null, model);
   return pollEditTask(taskId);
 }
 

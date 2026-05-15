@@ -40,6 +40,10 @@ export default function ChatInterface({
     states: string[];
   }>({ done: 0, failed: 0, total: 0, elapsed: 0, states: [] });
   const [partialUrls, setPartialUrls] = useState<string[]>([]);
+  // 主模型 (Z-Image) 60s 還沒出 → 啟動 Flux fallback 備援
+  const [fluxFallbackStatus, setFluxFallbackStatus] = useState<
+    "idle" | "running" | "success" | "failed"
+  >("idle");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 真實對話輪次 = 全部 user role 訊息 - 1（扣掉 intake seed）
@@ -58,6 +62,7 @@ export default function ChatInterface({
   // 避免單一請求超過 Vercel 60s timeout
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function callGenerateImage(params: any) {
+    setFluxFallbackStatus("idle");
     try {
       // ─── Step 1: submit ───
       const submitRes = await fetch(
@@ -140,10 +145,68 @@ export default function ChatInterface({
         }
       }
 
+      // Flux fallback：60s 內 Z-Image 一張都沒出 → 啟動 1 張 Flux 救場
+      let fluxPromise: Promise<string | null> | null = null;
+      let fluxUrl: string | null = null;
+      const FALLBACK_TRIGGER_SEC = 60;
+      function triggerFluxFallback() {
+        if (fluxPromise) return; // 已啟動過
+        setFluxFallbackStatus("running");
+        console.log("[poll] Z-Image 60s 0/3，啟動 Flux Kontext 備援");
+        fluxPromise = (async () => {
+          try {
+            const r = await fetch(
+              `/api/poc/generate-image/flux-fallback?key=${encodeURIComponent(accessKey)}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: prompts[0] }),
+              }
+            );
+            const d = await r.json();
+            if (!r.ok || !d.url) {
+              setFluxFallbackStatus("failed");
+              console.warn("[poll] Flux fallback failed:", d.error);
+              return null;
+            }
+            setFluxFallbackStatus("success");
+            console.log("[poll] Flux fallback success:", d.url);
+            return d.url as string;
+          } catch (e) {
+            setFluxFallbackStatus("failed");
+            console.warn("[poll] Flux fallback exception:", e);
+            return null;
+          }
+        })();
+      }
+
       const MAX_ATTEMPTS = 90;
       const startTime = Date.now();
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         await new Promise((r) => setTimeout(r, 2000));
+
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        const zDone = slots.filter((s) => s.url).length;
+
+        // 達到 60s 但 Z-Image 一張都沒出 → 啟動 Flux fallback
+        if (elapsed >= FALLBACK_TRIGGER_SEC && zDone === 0 && !fluxPromise) {
+          triggerFluxFallback();
+        }
+
+        // Flux 已經回來了 → 立刻用 Flux 結果（不等 Z-Image）
+        if (fluxPromise && !fluxUrl) {
+          // 非阻塞檢查 fluxPromise 狀態
+          const winner: string | null = await Promise.race<string | null>([
+            fluxPromise,
+            new Promise<null>((r) => setTimeout(() => r(null), 1)),
+          ]);
+          if (winner) {
+            fluxUrl = winner;
+            const zUrls = slots.filter((s) => s.url).map((s) => s.url!);
+            onImagesReady([winner, ...zUrls]);
+            return;
+          }
+        }
 
         const activeTaskIds = slots
           .filter((s) => !s.url && !s.error)
@@ -346,9 +409,28 @@ export default function ChatInterface({
                 <span className="text-fg3 ml-2">（{failed} 失敗）</span>
               )}
             </p>
-            <p className="text-xs font-mono text-fg3 mb-6">
+            <p className="text-xs font-mono text-fg3 mb-3">
               已等 {elapsed} 秒（一般 30-60s，尖峰可能到 120s）
             </p>
+
+            {/* Flux fallback 狀態提示 */}
+            {fluxFallbackStatus === "running" && (
+              <div className="mb-4 p-3 bg-accent/10 border border-accent/40 rounded-lg text-sm">
+                <span className="text-accent">⚡</span>{" "}
+                主模型 Z-Image 塞車中，已啟動備用模型 <span className="font-mono text-accent">FLUX Kontext</span> 救場...
+              </div>
+            )}
+            {fluxFallbackStatus === "success" && (
+              <div className="mb-4 p-3 bg-green-900/30 border border-green-500/40 rounded-lg text-sm text-green-300">
+                ✓ 備用模型已產出一張，準備呈現給你
+              </div>
+            )}
+            {fluxFallbackStatus === "failed" && (
+              <div className="mb-4 p-3 bg-fg3/10 border border-fg3/30 rounded-lg text-xs text-fg3">
+                備用模型也失敗，繼續等主模型...
+              </div>
+            )}
+
             {/* 三顆狀態球 */}
             <div className="flex justify-center gap-3 mb-6">
               {states.map((s, i) => {
