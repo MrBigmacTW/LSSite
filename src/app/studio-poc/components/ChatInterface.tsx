@@ -34,6 +34,15 @@ export default function ChatInterface({
   const [errorMsg, setErrorMsg] = useState("");
   const [generationCalled, setGenerationCalled] = useState(false);
   const [preparing, setPreparing] = useState(false);  // tool_call_starting → 顯示 inline 進度條
+  // 生圖進度（每 2s poll 一次更新）
+  const [pollProgress, setPollProgress] = useState<{
+    done: number;
+    failed: number;
+    total: number;
+    elapsed: number;
+    states: string[];
+  }>({ done: 0, failed: 0, total: 0, elapsed: 0, states: [] });
+  const [partialUrls, setPartialUrls] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 真實對話輪次 = 全部 user role 訊息 - 1（扣掉 intake seed）
@@ -87,10 +96,19 @@ export default function ChatInterface({
       }
 
       const taskIds = submitData.taskIds;
+      setPollProgress({
+        done: 0,
+        failed: 0,
+        total: taskIds.length,
+        elapsed: 0,
+        states: taskIds.map(() => "pending"),
+      });
 
       // ─── Step 2: poll ───
-      // 每 2s 一次，最多 50 次（100s）
-      for (let attempt = 0; attempt < 50; attempt++) {
+      // 每 2s 一次，最多 90 次（180s）
+      const MAX_ATTEMPTS = 90;
+      const startTime = Date.now();
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         await new Promise((r) => setTimeout(r, 2000));
 
         let pollData: {
@@ -113,10 +131,23 @@ export default function ChatInterface({
           continue;
         }
 
+        const results = pollData.results || [];
+        const states = results.map((r) => r.state);
+        const done = results.filter((r) => r.state === "success").length;
+        const failed = results.filter((r) => r.state === "failed").length;
+        const urls = pollData.urls || [];
+        setPollProgress({
+          done,
+          failed,
+          total: taskIds.length,
+          elapsed: Math.round((Date.now() - startTime) / 1000),
+          states,
+        });
+        setPartialUrls(urls);
+
         if (pollData.allDone) {
-          const urls = pollData.urls || [];
           if (urls.length === 0) {
-            const errors = (pollData.results || [])
+            const errors = results
               .filter((r) => r.state === "failed")
               .map((r) => `[${r.taskId.slice(0, 8)}] ${r.error || "unknown"}`)
               .join("\n");
@@ -129,9 +160,11 @@ export default function ChatInterface({
         }
       }
 
-      // 100s 還沒完
+      // 180s 還沒完
       setPhase("error");
-      setErrorMsg("生圖超過 100 秒未完成，可能 KIE 服務塞車，請稍後再試");
+      setErrorMsg(
+        `生圖超過 ${(MAX_ATTEMPTS * 2)} 秒未完成（KIE 塞車），完成 ${pollProgress.done}/${pollProgress.total}。請稍後再試或選擇已完成的 ${pollProgress.done} 張。`
+      );
     } catch (e) {
       setPhase("error");
       setErrorMsg(e instanceof Error ? e.message : "連線錯誤");
@@ -228,18 +261,70 @@ export default function ChatInterface({
   }
 
   if (phase === "generating") {
+    const { done, failed, total, elapsed, states } = pollProgress;
+    const allTried = total > 0 && done + failed === total;
+    const canEarlyExit = elapsed >= 60 && done >= 1;
+
     return (
-      <div className="max-w-2xl mx-auto pt-20 text-center">
+      <div className="max-w-2xl mx-auto pt-12 text-center">
         <div className="text-6xl mb-6 animate-pulse">🦞</div>
         <h2 className="font-display text-2xl md:text-3xl font-bold mb-3">
           龍蝦設計師正在創作...
         </h2>
-        <p className="text-fg2 mb-8">這需要約 30-60 秒，正在同時繪製 3 張候選圖</p>
-        <div className="flex justify-center gap-2">
-          <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-          <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-          <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-        </div>
+        {total > 0 ? (
+          <>
+            <p className="text-fg2 mb-2">
+              已完成 <span className="text-accent font-bold">{done}</span> / {total} 張
+              {failed > 0 && (
+                <span className="text-fg3 ml-2">（{failed} 失敗）</span>
+              )}
+            </p>
+            <p className="text-xs font-mono text-fg3 mb-6">
+              已等 {elapsed} 秒（一般 30-60s，尖峰可能到 120s）
+            </p>
+            {/* 三顆狀態球 */}
+            <div className="flex justify-center gap-3 mb-6">
+              {states.map((s, i) => {
+                const color =
+                  s === "success"
+                    ? "bg-green-500"
+                    : s === "failed"
+                      ? "bg-fg3"
+                      : "bg-accent animate-pulse";
+                const label =
+                  s === "success" ? "✓" : s === "failed" ? "✗" : `#${i + 1}`;
+                return (
+                  <div
+                    key={i}
+                    className={`w-12 h-12 rounded-full ${color} text-white font-mono font-bold flex items-center justify-center text-sm`}
+                  >
+                    {label}
+                  </div>
+                );
+              })}
+            </div>
+            {/* 早退按鈕 */}
+            {canEarlyExit && !allTried && (
+              <button
+                onClick={() => {
+                  if (partialUrls.length > 0) onImagesReady(partialUrls);
+                }}
+                className="px-5 py-2 bg-bg3 border border-accent/50 rounded-lg text-accent font-mono text-sm hover:bg-accent/10 transition"
+              >
+                ✓ 看看已完成的 {done} 張（不等剩下的）
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-fg2 mb-8">正在提交 KIE 任務...</p>
+            <div className="flex justify-center gap-2">
+              <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <div className="w-3 h-3 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </>
+        )}
       </div>
     );
   }
