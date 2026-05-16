@@ -48,37 +48,26 @@ function normalizeTextOverlay(raw?: string): string {
   return raw.trim();
 }
 
-// 通用核心後綴（彩色/向量風格用）
+// 通用核心後綴（彩色/向量風格用）— 精簡版避免破 KIE 1000 字限制
 const CORE_SUFFIX_DEFAULT = [
-  "standalone graphic design",
-  "vector-style flat 2D illustration",
-  "single isolated subject only",
-  "solid pure white #ffffff background, no gradient, no texture, no shadow",
-  "centered composition with clean edges",
-  "high resolution print-ready quality",
-  "no border, no frame, no decorative elements around the artwork",
+  "standalone graphic design, vector flat 2D illustration",
+  "single isolated subject, pure white background, no gradient",
+  "centered composition, high resolution, no border no frame",
 ];
 
-// 手繪 doodle / 黑白墨線專用後綴（避免跟「monochrome ink + cream paper」打架）
+// 手繪 doodle / 黑白墨線專用後綴
 const CORE_SUFFIX_DOODLE = [
-  "single isolated subject illustration",
-  "centered composition",
-  "high resolution",
-  "no frame, no border, no decorative elements",
+  "single subject, centered, no border, high resolution",
 ];
 
-// 強烈否定子句 — 阻止 Z-Image 生成衣服 / mockup
+// 否定子句（精簡版）
 const NEGATIVE_PROMPT = [
-  "NEGATIVE: no t-shirt, no shirt, no clothing, no apparel, no garment",
-  "no fabric texture, no fabric folds, no clothing mockup, no product photo",
-  "no human body, no mannequin, no person wearing anything",
+  "NEGATIVE: no clothing no garment no fabric no human body no mannequin",
 ];
 
-// 黑白手繪 doodle 額外負面 — 阻止 AI 加水彩 / 陰影 / 色填
+// 黑白手繪 doodle 額外負面
 const NEGATIVE_DOODLE = [
-  "no shading no shadows no gradient no color fills no watercolor no ink wash",
-  "no 3D rendering no depth no perspective no realistic textures",
-  "no tonal variation no crosshatching no halftone",
+  "no shading no color no gradient no watercolor no 3D no depth",
 ];
 
 // 偵測 style 字串是否屬於「黑白手繪 doodle」類別
@@ -93,22 +82,12 @@ function isMonochromeDoodleStyle(style: string): boolean {
 function visibilityHints(color?: "white" | "black" | "any"): string[] {
   switch (color) {
     case "white":
-      return [
-        "use predominantly dark, saturated, or richly colored elements",
-        "AVOID light pastels, white, or beige as dominant colors",
-        "strong dark linework for contrast",
-      ];
+      return ["dark saturated colors, strong dark outlines, avoid pastels"];
     case "black":
-      return [
-        "use predominantly bright, light, or vivid colored elements",
-        "AVOID black, dark navy, or dark brown as dominant colors",
-        "include white or light-colored highlights for contrast",
-      ];
+      return ["bright vivid colors with white highlights, avoid all dark colors"];
     case "any":
     default:
-      return [
-        "balanced mid-tone colors with strong dark outlines",
-      ];
+      return ["balanced colors with dark outlines"];
   }
 }
 
@@ -116,11 +95,11 @@ function visibilityHints(color?: "white" | "black" | "any"): string[] {
 function variationHint(index?: number): string | null {
   switch (index) {
     case 0:
-      return "classic frontal portrait composition";
+      return "frontal portrait";
     case 1:
-      return "dynamic three-quarter or playful pose, alternative angle";
+      return "dynamic three-quarter pose";
     case 2:
-      return "decorative stylized arrangement with patterns";
+      return "decorative pattern arrangement";
     default:
       return null;
   }
