@@ -48,8 +48,8 @@ function normalizeTextOverlay(raw?: string): string {
   return raw.trim();
 }
 
-// 通用核心後綴（所有情境都加）— 絕對不提 t-shirt / apparel
-const CORE_SUFFIX = [
+// 通用核心後綴（彩色/向量風格用）
+const CORE_SUFFIX_DEFAULT = [
   "standalone graphic design",
   "vector-style flat 2D illustration",
   "single isolated subject only",
@@ -59,12 +59,28 @@ const CORE_SUFFIX = [
   "no border, no frame, no decorative elements around the artwork",
 ];
 
+// 手繪 doodle / 黑白墨線專用後綴（避免跟「monochrome ink + cream paper」打架）
+const CORE_SUFFIX_DOODLE = [
+  "single isolated subject illustration",
+  "centered composition",
+  "high resolution",
+  "no frame, no border, no decorative elements",
+];
+
 // 強烈否定子句 — 阻止 Z-Image 生成衣服 / mockup
 const NEGATIVE_PROMPT = [
   "NEGATIVE: no t-shirt, no shirt, no clothing, no apparel, no garment",
   "no fabric texture, no fabric folds, no clothing mockup, no product photo",
   "no human body, no mannequin, no person wearing anything",
 ];
+
+// 偵測 style 字串是否屬於「黑白手繪 doodle」類別
+// 這類風格不要套用 color palette / vector suffix / pure white bg（會打架）
+function isMonochromeDoodleStyle(style: string): boolean {
+  return /monochrome|doodle|ink illustration|hand-drawn (ink|pen)|sketch style|black ink/i.test(
+    style
+  );
+}
 
 // 依目標 T 恤顏色加可見性提示 — 用色相 / 對比語言，不提衣服
 function visibilityHints(color?: "white" | "black" | "any"): string[] {
@@ -108,16 +124,21 @@ export function buildZImagePrompt(
   options: PromptOptions = {}
 ): string {
   const cleanText = normalizeTextOverlay(params.text_overlay);
+  const isMonoStyle = isMonochromeDoodleStyle(params.style);
 
+  // 黑白手繪風跳過會打架的條目：
+  // - color_palette（強迫上色）
+  // - visibility hints（強迫某個方向的色彩）
+  // - vector/white-bg suffix（強迫向量乾淨白底）
   const parts: (string | null | undefined)[] = [
     params.style,
     `featuring ${params.subject}`,
     cleanText ? `with the text "${cleanText}" clearly visible as part of the design` : null,
-    `${params.color_palette} color palette`,
+    isMonoStyle ? null : `${params.color_palette} color palette`,
     `${params.mood} mood`,
     variationHint(options.variationIndex) || params.composition || "centered composition",
-    ...CORE_SUFFIX,
-    ...visibilityHints(options.shirtColor),
+    ...(isMonoStyle ? CORE_SUFFIX_DOODLE : CORE_SUFFIX_DEFAULT),
+    ...(isMonoStyle ? [] : visibilityHints(options.shirtColor)),
     ...NEGATIVE_PROMPT,
   ];
   return parts.filter(Boolean).join(", ");

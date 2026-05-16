@@ -45,7 +45,7 @@ const STEPS: Step[] = [
     title: "想要什麼設計風格？",
     hint: "決定整張圖的視覺類別",
     options: [
-      { id: "casual_doodle", label: "隨興插畫風", value: "hand-drawn ink doodle illustration, loose organic linework, minimalist sketch style, monochrome black ink on warm cream paper, slightly imperfect charming lines, vintage illustrated journal aesthetic" },
+      { id: "casual_doodle", label: "隨興插畫風", value: "charmingly imperfect hand-drawn pen and ink doodle illustration, intentionally rough sketchy linework, completely monochrome black ink only on warm beige cream paper, NO color fills NO gradients, vintage illustrated journal style, casual hand-sketched spot illustration aesthetic" },
       { id: "minimal", label: "極簡線條", value: "minimalist line art" },
       { id: "vintage", label: "復古 / 懷舊", value: "vintage retro style" },
       { id: "street", label: "街頭 / 塗鴉", value: "urban street art graffiti style" },
