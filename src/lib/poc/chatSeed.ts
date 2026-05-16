@@ -12,17 +12,13 @@ export interface Msg {
 }
 
 export function buildSeedMessage(intake: IntakeAnswers): string {
-  return [
-    `風格：${intake.styleLabel}`,
-    `配色：${intake.colorPaletteLabel}`,
-    `氣氛：${intake.moodLabel}`,
-  ]
+  return [`風格：${intake.styleLabel}`, `氣氛：${intake.moodLabel}`]
     .map((p) => `- ${p}`)
     .join("\n");
 }
 
 export function buildOpening(intake: IntakeAnswers): string {
-  return `了解！你想要的是${intake.moodLabel}的${intake.styleLabel}設計，搭配${intake.colorPaletteLabel}的配色 ✨
+  return `了解！你想要的是${intake.moodLabel}的${intake.styleLabel}設計 ✨
 
 最關鍵的問題：**設計的主題（main subject）想要什麼？**
 
@@ -32,7 +28,9 @@ export function buildOpening(intake: IntakeAnswers): string {
 - 抽象幾何 / 星空 / 海浪
 - 文字標語 / 名字 / 紀念日期
 
-越具體越好，姿勢、表情、配件都可以說 — 我會把細節挖出來再開始畫。`;
+越具體越好，姿勢、表情、配件都可以說 — 我會把細節挖出來再開始畫。
+
+（配色我會依風格自動搭配，你進入預覽後也可以再用 AI 改色 / 換背景）`;
 }
 
 export function seedMessagesFromIntake(intake: IntakeAnswers): Msg[] {

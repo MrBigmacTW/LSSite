@@ -15,8 +15,6 @@ import { useState } from "react";
 export interface IntakeAnswers {
   style: string;            // 餵給 AI 的英文 value
   styleLabel: string;       // 中文顯示
-  colorPalette: string;
-  colorPaletteLabel: string;
   mood: string;
   moodLabel: string;
 }
@@ -33,7 +31,7 @@ interface Option {
 }
 
 interface Step {
-  key: keyof Pick<IntakeAnswers, "style" | "colorPalette" | "mood">;
+  key: keyof Pick<IntakeAnswers, "style" | "mood">;
   title: string;
   hint?: string;
   options: Option[];
@@ -53,20 +51,6 @@ const STEPS: Step[] = [
       { id: "abstract", label: "抽象幾何", value: "abstract geometric design" },
       { id: "cute", label: "可愛 Q 版", value: "cute chibi kawaii cartoon style" },
       { id: "cyberpunk", label: "賽博龐克", value: "cyberpunk neon futuristic style" },
-      { id: "other", label: "其他 — 我自己說", value: "__OTHER__" },
-    ],
-  },
-  {
-    key: "colorPalette",
-    title: "配色偏好？",
-    hint: "決定整體色調",
-    options: [
-      { id: "pastel", label: "粉嫩柔和", value: "soft pastel colors" },
-      { id: "vibrant", label: "鮮豔對比", value: "vibrant high-contrast colors" },
-      { id: "monochrome", label: "黑白單色", value: "monochrome black and white" },
-      { id: "earth", label: "大地自然", value: "earthy natural tones" },
-      { id: "neon", label: "螢光霓虹", value: "neon bright glowing colors" },
-      { id: "muted", label: "沉穩低彩", value: "muted desaturated tones" },
       { id: "other", label: "其他 — 我自己說", value: "__OTHER__" },
     ],
   },
@@ -103,9 +87,6 @@ export default function IntakeForm({ onComplete }: Props) {
     if (step.key === "style") {
       next.style = value;
       next.styleLabel = label;
-    } else if (step.key === "colorPalette") {
-      next.colorPalette = value;
-      next.colorPaletteLabel = label;
     } else if (step.key === "mood") {
       next.mood = value;
       next.moodLabel = label;
@@ -174,7 +155,7 @@ export default function IntakeForm({ onComplete }: Props) {
             {step.title}
           </h2>
           <p className="text-fg2 text-sm mb-6">
-            描述你想要的{step.key === "style" ? "風格" : step.key === "colorPalette" ? "配色" : "氣氛"}
+            描述你想要的{step.key === "style" ? "風格" : "氣氛"}
             （建議簡短具體，例如：「歐洲文藝復興油畫風」「霧面金屬質感」「深海憂鬱」）
           </p>
           <input
