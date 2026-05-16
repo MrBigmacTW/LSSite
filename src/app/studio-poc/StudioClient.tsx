@@ -117,6 +117,7 @@ export default function StudioClient({ accessKey }: Props) {
         {mode === "chat" && intakeAnswers && (
           <ChatInterface
             accessKey={accessKey}
+            intake={intakeAnswers}
             messages={chatMessages}
             setMessages={setChatMessages}
             onImagesReady={(urls) => {

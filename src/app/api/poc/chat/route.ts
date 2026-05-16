@@ -89,10 +89,14 @@ export async function POST(req: NextRequest) {
   }
 
   let messages: ChatMessage[] = [];
+  let intakeOverride: { style?: string; mood?: string } = {};
   try {
     const body = await req.json();
     messages = body.messages || [];
-    // 新版 intake 不再帶 shirtColor / hasText / textContent，body.intake 視為空物件
+    // intake.style / intake.mood — 強制覆寫 AI 填的對應 params
+    // 因為 AI 看到中文 label 會自己翻譯（隨興 → whimsical），
+    // 失去我們精心設計的英文 prompt
+    intakeOverride = body.intake || {};
   } catch {
     return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
   }
@@ -120,7 +124,9 @@ export async function POST(req: NextRequest) {
             controller.close();
             return;
           }
-          // text_overlay 由 AI 自行決定（intake 不再強制）
+          // 強制用 intake 的英文 value 覆寫 AI 自己腦補的翻譯
+          if (intakeOverride.style) (params as Record<string, string>).style = intakeOverride.style;
+          if (intakeOverride.mood) (params as Record<string, string>).mood = intakeOverride.mood;
           send({ type: "function_call", data: { params } });
         } catch (err) {
           send({
@@ -239,7 +245,14 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          // text_overlay 由 AI 自行決定（intake 不再強制）
+          // 強制用 intake 的英文 value 覆寫 AI 自己腦補的翻譯
+          if (intakeOverride.style) params.style = intakeOverride.style;
+          if (intakeOverride.mood) params.mood = intakeOverride.mood;
+          console.log(`[poc/chat] params after intake override:`, {
+            style: params.style.slice(0, 80) + "...",
+            mood: params.mood,
+            subject: params.subject,
+          });
           send({ type: "function_call", data: { id: toolCallId, params } });
         }
 

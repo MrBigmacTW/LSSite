@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { IntakeAnswers } from "./IntakeForm";
 import type { Msg } from "@/lib/poc/chatSeed";
 
 interface Props {
   accessKey: string;
+  /** intake 答案 — 後端會強制用這些英文 value 覆寫 AI 填的 style/mood */
+  intake: IntakeAnswers;
   /** 對話歷史（受控）— 由 StudioClient 持有，這樣「重新對話」回 chat 才不會被重置 */
   messages: Msg[];
   setMessages: React.Dispatch<React.SetStateAction<Msg[]>>;
@@ -20,6 +23,7 @@ const MAX_TURNS = 10;
 
 export default function ChatInterface({
   accessKey,
+  intake,
   messages,
   setMessages,
   onImagesReady,
@@ -65,6 +69,8 @@ export default function ChatInterface({
     setFluxFallbackStatus("idle");
     try {
       // ─── Step 1: submit ───
+      // params 此時已經被 chat route 用 intake 覆寫過了，
+      // 這裡只補上 shirtColor 讓 prompt processor 加可見性 hint
       const submitRes = await fetch(
         `/api/poc/generate-image?key=${encodeURIComponent(accessKey)}`,
         {
@@ -72,7 +78,6 @@ export default function ChatInterface({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             params,
-            // 新版 intake 不含 shirtColor → 用 "any" 讓 AI 生平衡色
             intake: { shirtColor: "any" as const },
           }),
         }
@@ -319,8 +324,11 @@ export default function ChatInterface({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-          // 新版 intake 不再傳 shirtColor / hasText / textContent
-          intake: {},
+          // 後端會用 intake.style/mood 強制覆寫 AI 填的值，避免 AI 自己腦補翻譯
+          intake: {
+            style: intake.style,
+            mood: intake.mood,
+          },
         }),
       });
 
