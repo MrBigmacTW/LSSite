@@ -43,7 +43,7 @@ const STEPS: Step[] = [
     title: "想要什麼設計風格？",
     hint: "決定整張圖的視覺類別",
     options: [
-      { id: "casual_doodle", label: "隨興插畫風", value: "pure black ink line drawing, outlines only, no fill no shading no color, hand-drawn doodle on cream paper, vintage rubber stamp style, flat 2D" },
+      { id: "casual_doodle", label: "隨興插畫風", value: "pure black and white line illustration, clean simple outlines only on plain white background, NO fill NO color NO texture NO grain, single-weight smooth lines, minimalist flat cartoon style" },
       { id: "minimal", label: "極簡線條", value: "minimalist line art" },
       { id: "vintage", label: "復古 / 懷舊", value: "vintage retro style" },
       { id: "street", label: "街頭 / 塗鴉", value: "urban street art graffiti style" },

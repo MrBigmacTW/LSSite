@@ -65,9 +65,9 @@ const NEGATIVE_PROMPT = [
   "NEGATIVE: no clothing no garment no fabric no human body no mannequin",
 ];
 
-// 黑白手繪 doodle 額外負面
+// 黑白手繪 doodle 額外負面（強硬禁止 AI 偷加任何顏色 / 紋理）
 const NEGATIVE_DOODLE = [
-  "no shading no color no gradient no watercolor no 3D no depth",
+  "no shading no color no gradient no watercolor no 3D no depth no grain no paper texture no orange no tabby pattern",
 ];
 
 // 偵測 style 字串是否屬於「黑白手繪 doodle」類別
