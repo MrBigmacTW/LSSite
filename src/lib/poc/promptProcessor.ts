@@ -74,10 +74,17 @@ const NEGATIVE_PROMPT = [
   "no human body, no mannequin, no person wearing anything",
 ];
 
+// 黑白手繪 doodle 額外負面 — 阻止 AI 加水彩 / 陰影 / 色填
+const NEGATIVE_DOODLE = [
+  "no shading no shadows no gradient no color fills no watercolor no ink wash",
+  "no 3D rendering no depth no perspective no realistic textures",
+  "no tonal variation no crosshatching no halftone",
+];
+
 // 偵測 style 字串是否屬於「黑白手繪 doodle」類別
 // 這類風格不要套用 color palette / vector suffix / pure white bg（會打架）
 function isMonochromeDoodleStyle(style: string): boolean {
-  return /monochrome|doodle|ink illustration|hand-drawn (ink|pen)|sketch style|black ink/i.test(
+  return /monochrome|doodle|black ink|line drawing|line art|contour line|ink illustration|hand-drawn ink|hand-drawn pen|outlines only/i.test(
     style
   );
 }
@@ -140,6 +147,7 @@ export function buildZImagePrompt(
     ...(isMonoStyle ? CORE_SUFFIX_DOODLE : CORE_SUFFIX_DEFAULT),
     ...(isMonoStyle ? [] : visibilityHints(options.shirtColor)),
     ...NEGATIVE_PROMPT,
+    ...(isMonoStyle ? NEGATIVE_DOODLE : []),
   ];
   return parts.filter(Boolean).join(", ");
 }
