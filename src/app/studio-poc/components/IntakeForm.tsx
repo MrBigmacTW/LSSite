@@ -45,7 +45,7 @@ const STEPS: Step[] = [
     title: "想要什麼設計風格？",
     hint: "決定整張圖的視覺類別",
     options: [
-      { id: "japanese", label: "日系手繪 / 動漫", value: "Japanese hand-drawn anime illustration" },
+      { id: "casual_doodle", label: "隨興插畫風", value: "hand-drawn ink doodle illustration, loose organic linework, minimalist sketch style, monochrome black ink on warm cream paper, slightly imperfect charming lines, vintage illustrated journal aesthetic" },
       { id: "minimal", label: "極簡線條", value: "minimalist line art" },
       { id: "vintage", label: "復古 / 懷舊", value: "vintage retro style" },
       { id: "street", label: "街頭 / 塗鴉", value: "urban street art graffiti style" },
