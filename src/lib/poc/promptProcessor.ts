@@ -86,14 +86,16 @@ function buildDoodlePrompt(params: DesignParams, options: PromptOptions): string
   const variation = doodleVariationHint(options.variationIndex);
 
   // 句構：完整描述句 + 強化條件 + 簡短負面
+  // 細線關鍵字：fineliner pen / delicate / thin / hairline
   return [
-    `A simple coloring book page illustration of ${subjectWithText}`,
+    `A delicate fineliner pen line art illustration of ${subjectWithText}`,
     variation,
     "isolated subject only on plain white background",
     "no scenery no decorative elements no background details",
-    "pure black ink outline, ready to be colored in",
-    "no fill no shading, single-weight clean cartoon lines",
-    "NEGATIVE: no clothing, no fabric, no background scenery, no decorations",
+    "thin hairline black ink outlines drawn with 0.3mm pen",
+    "minimalist clean single-weight lines, no fill no shading",
+    "elegant coloring book page style, ready to be colored in",
+    "NEGATIVE: no thick lines no bold outlines, no clothing no fabric no background scenery",
   ].join(", ");
 }
 
