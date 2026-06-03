@@ -31,9 +31,26 @@ async function loadImage(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// 與 mockup-engine 同樣的去白底演算法
+/**
+ * 強化版去白底（取代舊的「greyscale + negate」線性版本）
+ *
+ * 舊版問題：近白色 (#F5F5F5、#FAFAFA) 仍留淺灰、不夠透明
+ *
+ * 新版做法：
+ *  1. greyscale → 取亮度通道
+ *  2. normalise → 強制把整張圖的亮度範圍拉到 0-255
+ *  3. linear(1.4, -40) → 加強對比（淺色變更白、深色變更黑）
+ *  4. negate → 翻轉成 alpha (白→0透明、黑→255不透明)
+ *
+ * 效果：背景純白 / 近白色 → 完全透明、design 邊緣保留適度抗鋸齒
+ */
 async function removeWhiteBg(buffer: Buffer): Promise<Buffer> {
-  const mask = await sharp(buffer).greyscale().negate().toBuffer();
+  const mask = await sharp(buffer)
+    .greyscale()
+    .normalise()                // 拉伸對比 → 抹掉淺灰背景
+    .linear(1.4, -40)           // 進一步增強對比 (slope, intercept)
+    .negate()
+    .toBuffer();
   const rgb = await sharp(buffer).removeAlpha().toBuffer();
   return sharp(rgb).joinChannel(mask).png().toBuffer();
 }
