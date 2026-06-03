@@ -5,11 +5,14 @@
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // 模型優先順序（429 / 5xx / 404 會自動降級）
-// - flash-lite-001: 配額最寬鬆，搭配嚴格 prompt 應可靠呼叫 tool
-// - flash-001: 次選，tool calling 最穩但配額較易耗盡
+// 2.0 系列被 OpenRouter 下架，改用 2.5 + 跨 vendor 備援避免單一服務掛掉時整個爆掉
+// - gemini-2.5-flash: Google 當代主力，cheap + tool calling 穩
+// - claude-3.5-haiku: Anthropic 小模型，tool calling 一流（不同 vendor 故障獨立）
+// - gpt-4o-mini: OpenAI 平價選項（再一個保險）
 const MODEL_FALLBACK_CHAIN = [
-  "google/gemini-2.0-flash-lite-001",
-  "google/gemini-2.0-flash-001",
+  "google/gemini-2.5-flash",
+  "anthropic/claude-3.5-haiku",
+  "openai/gpt-4o-mini",
 ];
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
