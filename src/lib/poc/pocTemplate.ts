@@ -52,21 +52,22 @@ export interface TemplateModel {
 
 // ── 正面 6 個印製位置（依參考圖 A-F） ──
 // 模板 1086×1448，T 恤中心 x ≈ 543，1cm ≈ 15px
+// 經用戶用 /studio-poc/admin/positions 視覺調整後匯出的座標
 const FRONT_POSITIONS: PrintPosition[] = [
   {
     id: "A",
     label: "A · 正面大圖",
     sizeCm: "29×42 cm (A3)",
     description: "滿版主視覺",
-    printArea: { x: 326, y: 320, width: 435, height: 630 },
-    freelyMovable: true,    // 大區可微調
+    printArea: { x: 315, y: 527, width: 462, height: 669 },
+    freelyMovable: true,
   },
   {
     id: "B",
     label: "B · 正面中圖",
     sizeCm: "21×29 cm (A4)",
     description: "中型設計",
-    printArea: { x: 386, y: 380, width: 315, height: 435 },
+    printArea: { x: 388, y: 474, width: 315, height: 435 },
     freelyMovable: true,
   },
   {
@@ -74,7 +75,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "C · 正面橫向",
     sizeCm: "15×21 cm",
     description: "橫式 logo / 字樣",
-    printArea: { x: 431, y: 440, width: 225, height: 315 },
+    printArea: { x: 394, y: 472, width: 295, height: 413, rotation: -90 },
     freelyMovable: true,
   },
   {
@@ -82,15 +83,15 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "D · 胸口置中",
     sizeCm: "10×10 cm",
     description: "小 logo 居中",
-    printArea: { x: 468, y: 360, width: 150, height: 150 },
-    freelyMovable: false,   // 小固定位
+    printArea: { x: 432, y: 397, width: 223, height: 223 },
+    freelyMovable: false,
   },
   {
     id: "E",
     label: "E · 左胸",
     sizeCm: "10×10 cm",
     description: "經典左胸 logo",
-    printArea: { x: 288, y: 360, width: 150, height: 150 },
+    printArea: { x: 326, y: 389, width: 179, height: 179 },
     freelyMovable: false,
   },
   {
@@ -98,8 +99,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    // 左袖實際在 T 恤照片中是斜向下延伸，加 -25° 旋轉貼合袖子角度
-    printArea: { x: 125, y: 440, width: 90, height: 130, rotation: -25 },
+    printArea: { x: 105, y: 383, width: 92, height: 132, rotation: 45 },
     freelyMovable: false,
   },
 ];
