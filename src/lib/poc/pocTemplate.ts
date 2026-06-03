@@ -26,6 +26,11 @@ export interface PrintPosition {
   sizeCm: string;       // "29×42 cm"
   description: string;  // 一句話補充
   printArea: PrintArea;
+  /** 是否允許自由拖曳 / 縮放 / 旋轉。
+   *  true  = 大型印製區（A大圖/B中圖/C橫向），允許客戶在框內微調
+   *  false = 小型固定位置（D胸口小/E左胸/F左袖），自動置中於 printArea，
+   *          不可拖曳（避免歪掉、避免印到衣服外） */
+  freelyMovable: boolean;
 }
 
 export interface TemplateColor {
@@ -51,48 +56,48 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "A · 正面大圖",
     sizeCm: "29×42 cm (A3)",
     description: "滿版主視覺",
-    // 29×42 cm → 435×630 px，置中於 x=543
     printArea: { x: 326, y: 320, width: 435, height: 630 },
+    freelyMovable: true,    // 大區可微調
   },
   {
     id: "B",
     label: "B · 正面中圖",
     sizeCm: "21×29 cm (A4)",
     description: "中型設計",
-    // 21×29 cm → 315×435 px
     printArea: { x: 386, y: 380, width: 315, height: 435 },
+    freelyMovable: true,
   },
   {
     id: "C",
     label: "C · 正面橫向",
     sizeCm: "15×21 cm",
     description: "橫式 logo / 字樣",
-    // 15×21 cm → 225×315 px
     printArea: { x: 431, y: 440, width: 225, height: 315 },
+    freelyMovable: true,
   },
   {
     id: "D",
     label: "D · 胸口置中",
     sizeCm: "10×10 cm",
     description: "小 logo 居中",
-    // 10×10 cm → 150×150 px，靠上一點
     printArea: { x: 468, y: 360, width: 150, height: 150 },
+    freelyMovable: false,   // 小固定位
   },
   {
     id: "E",
     label: "E · 左胸",
     sizeCm: "10×10 cm",
     description: "經典左胸 logo",
-    // 中心左偏 12cm = 180px，x_center = 543-180 = 363
     printArea: { x: 288, y: 360, width: 150, height: 150 },
+    freelyMovable: false,
   },
   {
     id: "F",
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    // 依用戶手繪框校準：袖區中心 ≈ (140, 430)
     printArea: { x: 85, y: 355, width: 105, height: 150 },
+    freelyMovable: false,   // 袖子鎖死，避免歪掉
   },
 ];
 
@@ -128,12 +133,13 @@ export const DEFAULT_TEMPLATE_ID = "short_sleeve_front";
 export const DEFAULT_COLOR_ID = "white";
 export const DEFAULT_POSITION_ID = "A";
 
-// ── Helper：依 ids 找到實際合成所需的 (imagePath, printArea, slug, darkShirt) ──
+// ── Helper：依 ids 找到實際合成所需的 (imagePath, printArea, slug, darkShirt, freelyMovable) ──
 export interface ResolvedTemplate {
-  slug: string;          // 給 mockup-engine 用的識別 (供未來 cache)
+  slug: string;
   imagePath: string;
   printArea: PrintArea;
-  darkShirt: boolean;    // 是否啟用白底襯印製模式
+  darkShirt: boolean;
+  freelyMovable: boolean;
 }
 
 export function resolveTemplate(
@@ -152,5 +158,6 @@ export function resolveTemplate(
     imagePath: color.imagePath,
     printArea: position.printArea,
     darkShirt: color.darkShirt ?? false,
+    freelyMovable: position.freelyMovable,
   };
 }

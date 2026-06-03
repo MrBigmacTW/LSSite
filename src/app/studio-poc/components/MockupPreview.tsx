@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import PositionDiagram from "./PositionDiagram";
 import {
   POC_TEMPLATES,
   DEFAULT_TEMPLATE_ID,
@@ -173,10 +174,25 @@ export default function MockupPreview({
     };
   }
 
+  /**
+   * 把 offset 夾在 printArea 範圍內 — 確保 design 中心永遠在 printArea 內
+   * 不允許拖出框，避免印到衣服外或袖子上
+   */
+  function clampOffset(rawX: number, rawY: number) {
+    const halfW = position.printArea.width / 2;
+    const halfH = position.printArea.height / 2;
+    return {
+      x: Math.max(-halfW, Math.min(halfW, rawX)),
+      y: Math.max(-halfH, Math.min(halfH, rawY)),
+    };
+  }
+
   function beginInteraction(
     mode: Exclude<InteractionMode, "none">,
     e: React.PointerEvent
   ) {
+    // 固定位置完全禁止互動
+    if (!position.freelyMovable) return;
     e.stopPropagation();
     e.preventDefault();
     const pt = clientToSvg(e.clientX, e.clientY);
@@ -208,10 +224,12 @@ export default function MockupPreview({
     };
 
     if (interaction === "drag") {
-      setImgOffset({
-        x: s.offsetX + (pt.x - s.mouseX),
-        y: s.offsetY + (pt.y - s.mouseY),
-      });
+      // 夾在 printArea 內，不准拖出框
+      const clamped = clampOffset(
+        s.offsetX + (pt.x - s.mouseX),
+        s.offsetY + (pt.y - s.mouseY)
+      );
+      setImgOffset(clamped);
     } else if (interaction === "resize") {
       const dist = Math.hypot(pt.x - center.x, pt.y - center.y);
       const ratio = dist / Math.max(s.initialDistance, 1);
@@ -332,10 +350,10 @@ export default function MockupPreview({
             )}
           </div>
 
-          {/* 起始位置 */}
+          {/* 起始位置（含示意圖） */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
-              起始位置（會重置變換）
+              印製位置
             </p>
             <div className="grid grid-cols-3 gap-1.5">
               {template.positions.map((p) => {
@@ -344,21 +362,31 @@ export default function MockupPreview({
                   <button
                     key={p.id}
                     onClick={() => selectPosition(p.id)}
-                    className={`p-2 rounded-lg border text-left transition ${
+                    className={`p-2 rounded-lg border text-left transition flex gap-2 items-start ${
                       active
                         ? "border-accent bg-accent/10"
                         : "border-fg3/30 bg-bg3/40 hover:border-fg2"
                     }`}
                   >
-                    <div
-                      className={`font-display text-sm font-bold ${
-                        active ? "text-accent" : "text-fg"
-                      }`}
-                    >
-                      {p.label}
-                    </div>
-                    <div className="text-[10px] font-mono text-fg3">
-                      {p.sizeCm}
+                    <PositionDiagram
+                      printArea={p.printArea}
+                      freelyMovable={p.freelyMovable}
+                      className="w-9 h-12 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`font-display text-sm font-bold leading-tight ${
+                          active ? "text-accent" : "text-fg"
+                        }`}
+                      >
+                        {p.label}
+                      </div>
+                      <div className="text-[10px] font-mono text-fg3 leading-tight mt-0.5">
+                        {p.sizeCm}
+                      </div>
+                      <div className="text-[9px] text-fg3 mt-0.5">
+                        {p.freelyMovable ? "可微調" : "固定"}
+                      </div>
                     </div>
                   </button>
                 );
@@ -439,8 +467,12 @@ export default function MockupPreview({
               {/* 設計圖（含可選的白底/黑底 underbase） */}
               <g
                 transform={`translate(${designCx}, ${designCy}) rotate(${imgRotation})`}
-                onPointerDown={(e) => beginInteraction("drag", e)}
-                style={{ cursor: interaction === "drag" ? "grabbing" : "grab" }}
+                onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
+                style={{
+                  cursor: position.freelyMovable
+                    ? interaction === "drag" ? "grabbing" : "grab"
+                    : "default",
+                }}
               >
                 {printMode === "white_plate" && (
                   <rect
@@ -470,7 +502,8 @@ export default function MockupPreview({
                 />
               </g>
 
-              {/* Handles */}
+              {/* Handles — 固定位置 (freelyMovable=false) 不顯示 */}
+              {position.freelyMovable && (
               <g pointerEvents="all">
                 {/* 旋轉桿 */}
                 <line
@@ -528,6 +561,7 @@ export default function MockupPreview({
                   ⤡
                 </text>
               </g>
+              )}
 
               {/* 浮水印（蓋在 printArea 內） */}
               <g

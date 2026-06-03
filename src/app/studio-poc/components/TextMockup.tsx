@@ -10,6 +10,7 @@
  */
 
 import { useRef, useState } from "react";
+import PositionDiagram from "./PositionDiagram";
 import {
   POC_TEMPLATES,
   DEFAULT_TEMPLATE_ID,
@@ -141,11 +142,25 @@ export default function TextMockup({ onBack }: Props) {
     };
   }
 
+  /**
+   * 把 offset 夾在 printArea 範圍內 — design 中心永遠在框內
+   */
+  function clampOffset(rawX: number, rawY: number) {
+    const halfW = position.printArea.width / 2;
+    const halfH = position.printArea.height / 2;
+    return {
+      x: Math.max(-halfW, Math.min(halfW, rawX)),
+      y: Math.max(-halfH, Math.min(halfH, rawY)),
+    };
+  }
+
   // 開始任何 interaction
   function beginInteraction(
     mode: Exclude<InteractionMode, "none">,
     e: React.PointerEvent
   ) {
+    // 固定位置完全禁止互動
+    if (!position.freelyMovable) return;
     e.stopPropagation();
     e.preventDefault();
     const pt = clientToSvg(e.clientX, e.clientY);
@@ -173,10 +188,12 @@ export default function TextMockup({ onBack }: Props) {
     const s = startState.current;
 
     if (interaction === "drag") {
-      setTextOffset({
-        x: s.offsetX + (pt.x - s.mouseX),
-        y: s.offsetY + (pt.y - s.mouseY),
-      });
+      // 夾在 printArea 內
+      const clamped = clampOffset(
+        s.offsetX + (pt.x - s.mouseX),
+        s.offsetY + (pt.y - s.mouseY)
+      );
+      setTextOffset(clamped);
     } else if (interaction === "resize") {
       const center = {
         x: position.printArea.x + position.printArea.width / 2 + s.offsetX,
@@ -375,14 +392,22 @@ export default function TextMockup({ onBack }: Props) {
                   <button
                     key={p.id}
                     onClick={() => selectPosition(p.id)}
-                    className={`p-2 rounded-lg border text-left transition ${
+                    className={`p-2 rounded-lg border text-left transition flex gap-2 items-start ${
                       active ? "border-accent bg-accent/10" : "border-fg3/30 bg-bg3/40 hover:border-fg2"
                     }`}
                   >
-                    <div className={`font-display text-sm font-bold ${active ? "text-accent" : "text-fg"}`}>
-                      {p.label}
+                    <PositionDiagram
+                      printArea={p.printArea}
+                      freelyMovable={p.freelyMovable}
+                      className="w-9 h-12 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-display text-sm font-bold leading-tight ${active ? "text-accent" : "text-fg"}`}>
+                        {p.label}
+                      </div>
+                      <div className="text-[10px] font-mono text-fg3 leading-tight mt-0.5">{p.sizeCm}</div>
+                      <div className="text-[9px] text-fg3 mt-0.5">{p.freelyMovable ? "可微調" : "固定"}</div>
                     </div>
-                    <div className="text-[10px] font-mono text-fg3">{p.sizeCm}</div>
                   </button>
                 );
               })}
@@ -452,8 +477,12 @@ export default function TextMockup({ onBack }: Props) {
               {lines.length > 0 && (
                 <g
                   transform={`translate(${designCx}, ${designCy}) rotate(${textRotation})`}
-                  onPointerDown={(e) => beginInteraction("drag", e)}
-                  style={{ cursor: interaction === "drag" ? "grabbing" : "grab" }}
+                  onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
+                  style={{
+                    cursor: position.freelyMovable
+                      ? interaction === "drag" ? "grabbing" : "grab"
+                      : "default",
+                  }}
                 >
                   {lines.map((line, i) => {
                     const y = -((lines.length - 1) * lineHeight) / 2 + i * lineHeight;
@@ -476,8 +505,8 @@ export default function TextMockup({ onBack }: Props) {
                 </g>
               )}
 
-              {/* ── Handles（旋轉桿 + 縮放角） ── */}
-              {lines.length > 0 && (
+              {/* ── Handles（旋轉桿 + 縮放角）— 固定位置不顯示 ── */}
+              {lines.length > 0 && position.freelyMovable && (
                 <g pointerEvents="all">
                   {/* 旋轉桿線 */}
                   <line
