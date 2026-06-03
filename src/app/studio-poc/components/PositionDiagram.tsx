@@ -10,6 +10,7 @@ interface PrintArea {
   y: number;
   width: number;
   height: number;
+  rotation?: number;
 }
 
 interface Props {
@@ -73,18 +74,26 @@ export default function PositionDiagram({
         strokeWidth="8"
       />
 
-      {/* 印製區域虛線框 */}
-      <rect
-        x={printArea.x}
-        y={printArea.y}
-        width={printArea.width}
-        height={printArea.height}
-        fill={accentColor}
-        fillOpacity="0.15"
-        stroke={accentColor}
-        strokeWidth="14"
-        strokeDasharray="40 24"
-      />
+      {/* 印製區域虛線框（含旋轉） */}
+      <g
+        transform={
+          printArea.rotation
+            ? `rotate(${printArea.rotation}, ${printArea.x + printArea.width / 2}, ${printArea.y + printArea.height / 2})`
+            : undefined
+        }
+      >
+        <rect
+          x={printArea.x}
+          y={printArea.y}
+          width={printArea.width}
+          height={printArea.height}
+          fill={accentColor}
+          fillOpacity="0.15"
+          stroke={accentColor}
+          strokeWidth="14"
+          strokeDasharray="40 24"
+        />
+      </g>
     </svg>
   );
 }

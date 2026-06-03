@@ -461,22 +461,30 @@ export default function TextMockup({ onBack }: Props) {
                 width={TEMPLATE_W}
                 height={TEMPLATE_H}
               />
-              {/* 印製範圍提示框 */}
-              <rect
-                x={position.printArea.x}
-                y={position.printArea.y}
-                width={position.printArea.width}
-                height={position.printArea.height}
-                fill="none"
-                stroke="rgba(232, 67, 42, 0.35)"
-                strokeWidth="3"
-                strokeDasharray="12 8"
-              />
+              {/* 印製範圍提示框（含 printArea.rotation） */}
+              <g
+                transform={
+                  position.printArea.rotation
+                    ? `rotate(${position.printArea.rotation}, ${position.printArea.x + position.printArea.width / 2}, ${position.printArea.y + position.printArea.height / 2})`
+                    : undefined
+                }
+              >
+                <rect
+                  x={position.printArea.x}
+                  y={position.printArea.y}
+                  width={position.printArea.width}
+                  height={position.printArea.height}
+                  fill="none"
+                  stroke="rgba(232, 67, 42, 0.35)"
+                  strokeWidth="3"
+                  strokeDasharray="12 8"
+                />
+              </g>
 
-              {/* 文字（旋轉但不縮放，scale 由 fontSize 直接控制） */}
+              {/* 文字（套上 printArea.rotation + user 旋轉） */}
               {lines.length > 0 && (
                 <g
-                  transform={`translate(${designCx}, ${designCy}) rotate(${textRotation})`}
+                  transform={`translate(${designCx}, ${designCy}) rotate(${(position.printArea.rotation || 0) + textRotation})`}
                   onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
                   style={{
                     cursor: position.freelyMovable

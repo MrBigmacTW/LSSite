@@ -452,21 +452,29 @@ export default function MockupPreview({
                 width={TEMPLATE_W}
                 height={TEMPLATE_H}
               />
-              {/* 印製範圍提示框 */}
-              <rect
-                x={position.printArea.x}
-                y={position.printArea.y}
-                width={position.printArea.width}
-                height={position.printArea.height}
-                fill="none"
-                stroke="rgba(232, 67, 42, 0.35)"
-                strokeWidth="3"
-                strokeDasharray="12 8"
-              />
-
-              {/* 設計圖（含可選的白底/黑底 underbase） */}
+              {/* 印製範圍提示框（含 printArea.rotation） */}
               <g
-                transform={`translate(${designCx}, ${designCy}) rotate(${imgRotation})`}
+                transform={
+                  position.printArea.rotation
+                    ? `rotate(${position.printArea.rotation}, ${position.printArea.x + position.printArea.width / 2}, ${position.printArea.y + position.printArea.height / 2})`
+                    : undefined
+                }
+              >
+                <rect
+                  x={position.printArea.x}
+                  y={position.printArea.y}
+                  width={position.printArea.width}
+                  height={position.printArea.height}
+                  fill="none"
+                  stroke="rgba(232, 67, 42, 0.35)"
+                  strokeWidth="3"
+                  strokeDasharray="12 8"
+                />
+              </g>
+
+              {/* 設計圖（含可選的白底/黑底 underbase） — 套上 printArea.rotation + user 旋轉 */}
+              <g
+                transform={`translate(${designCx}, ${designCy}) rotate(${(position.printArea.rotation || 0) + imgRotation})`}
                 onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
                 style={{
                   cursor: position.freelyMovable

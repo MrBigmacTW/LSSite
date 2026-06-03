@@ -18,6 +18,8 @@ export interface PrintArea {
   y: number;
   width: number;
   height: number;
+  /** 旋轉角度（度數，0 = 不轉、負值 = 逆時針）— 給袖子等斜角位置用 */
+  rotation?: number;
 }
 
 export interface PrintPosition {
@@ -96,8 +98,9 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
-    printArea: { x: 85, y: 355, width: 105, height: 150 },
-    freelyMovable: false,   // 袖子鎖死，避免歪掉
+    // 左袖實際在 T 恤照片中是斜向下延伸，加 -25° 旋轉貼合袖子角度
+    printArea: { x: 125, y: 440, width: 90, height: 130, rotation: -25 },
+    freelyMovable: false,
   },
 ];
 
