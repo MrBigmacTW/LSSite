@@ -1,17 +1,13 @@
 "use client";
 
 /**
- * MockupPreview — SVG 客戶端即時渲染（Phase 6 重寫）
+ * MockupPreview — SVG 客戶端即時渲染（Phase 6 重寫）+ 四面視角
  *
- * 變更：
- *  - 從「Sharp server-side 合成 JPEG」→「SVG client-side 即時渲染」
- *  - 圖片支援 free transform：拖曳 / 縮放 / 旋轉（同 TextMockup 機制）
- *  - 印製模式從 5 種簡化為 3 種（純 SVG 即可實作）：
- *     - 透明：用 preprocess-design 去過白底的 PNG
- *     - 白底：原圖 + 白色 rect 墊底（DTG underbase 模擬）
- *     - 黑底：原圖 + 黑色 rect 墊底
- *  - 進入頁面時打一次 preprocess API 拿到透明版 URL，之後所有
- *    互動完全純前端，零 API 等待
+ * 四面視角：
+ *  - 正面 / 左側 / 背面 / 右側
+ *  - 左右方向鍵（← →）切換
+ *  - 點選印製位置 → 自動切換到該位置所屬的面
+ *  - 未設定底圖的面顯示佔位提示
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +17,9 @@ import {
   DEFAULT_TEMPLATE_ID,
   DEFAULT_COLOR_ID,
   DEFAULT_POSITION_ID,
+  FACES,
+  FACE_LABELS,
+  type Face,
 } from "@/lib/poc/pocTemplate";
 
 type PrintMode = "transparent" | "white_plate" | "black_plate";
@@ -70,6 +69,11 @@ export default function MockupPreview({
   const [positionId, setPositionId] = useState(DEFAULT_POSITION_ID);
   const [printMode, setPrintMode] = useState<PrintMode>("transparent");
 
+  // 當前顯示的面
+  const template = POC_TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE_ID)!;
+  const defaultFace = template.positions.find((p) => p.id === DEFAULT_POSITION_ID)?.face ?? "front";
+  const [faceId, setFaceId] = useState<Face>(defaultFace);
+
   // 預處理（去白底）狀態
   const [transparentUrl, setTransparentUrl] = useState<string | null>(null);
   const [imgW, setImgW] = useState(0);
@@ -86,9 +90,33 @@ export default function MockupPreview({
   const startState = useRef<InteractionStart | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const template = POC_TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE_ID)!;
   const teeColor = template.colors.find((c) => c.id === colorId)!;
   const position = template.positions.find((p) => p.id === positionId)!;
+
+  // 當前面的底圖（無則 fallback 正面）
+  const faceImageSrc = teeColor.faceImages[faceId] ?? teeColor.faceImages.front ?? "";
+  const faceHasImage = !!teeColor.faceImages[faceId];
+
+  // ── 鍵盤切面（← / →） ──
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      // 避免影響 input 輸入
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowLeft") {
+        setFaceId((prev) => {
+          const idx = FACES.indexOf(prev);
+          return FACES[(idx - 1 + FACES.length) % FACES.length];
+        });
+      } else if (e.key === "ArrowRight") {
+        setFaceId((prev) => {
+          const idx = FACES.indexOf(prev);
+          return FACES[(idx + 1) % FACES.length];
+        });
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   // 進入頁面時 preprocess（去白底 + 取得圖片尺寸）
   useEffect(() => {
@@ -124,13 +152,13 @@ export default function MockupPreview({
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [designUrl, accessKey]);
 
-  // 切印製位置 → 重置 transform
+  // 切印製位置 → 重置 transform + 自動切換到該位置所屬的面
   function selectPosition(newId: string) {
+    const newPos = template.positions.find((p) => p.id === newId);
+    if (newPos) setFaceId(newPos.face);
     setPositionId(newId);
     setImgOffset({ x: 0, y: 0 });
     setImgScale(1);
@@ -174,10 +202,6 @@ export default function MockupPreview({
     };
   }
 
-  /**
-   * 把 offset 夾在 printArea 範圍內 — 確保 design 中心永遠在 printArea 內
-   * 不允許拖出框，避免印到衣服外或袖子上
-   */
   function clampOffset(rawX: number, rawY: number) {
     const halfW = position.printArea.width / 2;
     const halfH = position.printArea.height / 2;
@@ -191,7 +215,6 @@ export default function MockupPreview({
     mode: Exclude<InteractionMode, "none">,
     e: React.PointerEvent
   ) {
-    // 固定位置完全禁止互動
     if (!position.freelyMovable) return;
     e.stopPropagation();
     e.preventDefault();
@@ -209,9 +232,7 @@ export default function MockupPreview({
     setInteraction(mode);
     try {
       (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
 
   function handlePointerMove(e: React.PointerEvent) {
@@ -224,7 +245,6 @@ export default function MockupPreview({
     };
 
     if (interaction === "drag") {
-      // 夾在 printArea 內，不准拖出框
       const clamped = clampOffset(
         s.offsetX + (pt.x - s.mouseX),
         s.offsetY + (pt.y - s.mouseY)
@@ -267,6 +287,20 @@ export default function MockupPreview({
     x: designCx + (0 * cosR - -finalH / 2 * sinR),
     y: designCy + (0 * sinR + -finalH / 2 * cosR),
   };
+
+  // 面切換 helpers
+  function prevFace() {
+    setFaceId((prev) => {
+      const idx = FACES.indexOf(prev);
+      return FACES[(idx - 1 + FACES.length) % FACES.length];
+    });
+  }
+  function nextFace() {
+    setFaceId((prev) => {
+      const idx = FACES.indexOf(prev);
+      return FACES[(idx + 1) % FACES.length];
+    });
+  }
 
   return (
     <div className="max-w-7xl mx-auto pt-2">
@@ -328,19 +362,13 @@ export default function MockupPreview({
                         : "border-fg3/30 bg-bg3/40 hover:border-fg2"
                     } disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
-                    <div
-                      className={`text-sm font-medium ${
-                        active ? "text-accent" : "text-fg"
-                      }`}
-                    >
+                    <div className={`text-sm font-medium ${active ? "text-accent" : "text-fg"}`}>
                       {m.label}
                       {disabled && preprocessing && (
                         <span className="text-xs text-fg3 ml-2">處理中...</span>
                       )}
                     </div>
-                    <div className="text-xs font-mono text-fg3 mt-0.5">
-                      {m.hint}
-                    </div>
+                    <div className="text-xs font-mono text-fg3 mt-0.5">{m.hint}</div>
                   </button>
                 );
               })}
@@ -350,7 +378,7 @@ export default function MockupPreview({
             )}
           </div>
 
-          {/* 起始位置（含示意圖） */}
+          {/* 印製位置 */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase tracking-wider mb-2">
               印製位置
@@ -358,6 +386,7 @@ export default function MockupPreview({
             <div className="grid grid-cols-3 gap-1.5">
               {template.positions.map((p) => {
                 const active = positionId === p.id;
+                const onCurrentFace = p.face === faceId;
                 return (
                   <button
                     key={p.id}
@@ -365,7 +394,9 @@ export default function MockupPreview({
                     className={`p-2 rounded-lg border text-left transition flex gap-2 items-start ${
                       active
                         ? "border-accent bg-accent/10"
-                        : "border-fg3/30 bg-bg3/40 hover:border-fg2"
+                        : onCurrentFace
+                        ? "border-fg3/30 bg-bg3/40 hover:border-fg2"
+                        : "border-fg3/20 bg-bg3/20 hover:border-fg3/40 opacity-60"
                     }`}
                   >
                     <PositionDiagram
@@ -374,18 +405,17 @@ export default function MockupPreview({
                       className="w-9 h-12 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div
-                        className={`font-display text-sm font-bold leading-tight ${
-                          active ? "text-accent" : "text-fg"
-                        }`}
-                      >
+                      <div className={`font-display text-sm font-bold leading-tight ${active ? "text-accent" : "text-fg"}`}>
                         {p.label}
                       </div>
                       <div className="text-[10px] font-mono text-fg3 leading-tight mt-0.5">
                         {p.sizeCm}
                       </div>
-                      <div className="text-[9px] text-fg3 mt-0.5">
-                        {p.freelyMovable ? "可微調" : "固定"}
+                      <div className="text-[9px] text-fg3 mt-0.5 flex items-center gap-1">
+                        <span>{p.freelyMovable ? "可微調" : "固定"}</span>
+                        {!onCurrentFace && (
+                          <span className="text-accent/70">· {FACE_LABELS[p.face]}</span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -405,12 +435,7 @@ export default function MockupPreview({
             </div>
             <button
               onClick={resetTransform}
-              disabled={
-                imgOffset.x === 0 &&
-                imgOffset.y === 0 &&
-                imgScale === 1 &&
-                imgRotation === 0
-              }
+              disabled={imgOffset.x === 0 && imgOffset.y === 0 && imgScale === 1 && imgRotation === 0}
               className="w-full px-3 py-1.5 bg-bg2 border border-fg3/30 rounded text-xs font-mono text-fg2 hover:border-accent hover:text-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
             >
               ↻ 重置位置 / 大小 / 旋轉
@@ -431,8 +456,56 @@ export default function MockupPreview({
         </div>
 
         {/* ── 右側 SVG 即時預覽 ── */}
-        <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4 md:p-6 flex items-start justify-center">
-          <div className="w-full max-w-2xl">
+        <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4 md:p-6 flex flex-col items-center justify-start">
+
+          {/* 面導航列 */}
+          <div className="flex items-center gap-1 mb-4 select-none">
+            <button
+              onClick={prevFace}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-fg3/30 text-fg2 hover:border-accent hover:text-accent transition text-sm"
+              title="上一面（← 鍵）"
+            >
+              ←
+            </button>
+            {FACES.map((face) => {
+              const hasImg = !!teeColor.faceImages[face];
+              const isActive = face === faceId;
+              return (
+                <button
+                  key={face}
+                  onClick={() => setFaceId(face)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition ${
+                    isActive
+                      ? "border-accent bg-accent/10 text-accent font-bold"
+                      : "border-fg3/30 text-fg2 hover:border-fg2"
+                  } ${!hasImg ? "opacity-40" : ""}`}
+                  title={hasImg ? FACE_LABELS[face] : `${FACE_LABELS[face]}（底圖尚未設定）`}
+                >
+                  {FACE_LABELS[face]}
+                  {!hasImg && <span className="ml-1 text-[8px]">○</span>}
+                </button>
+              );
+            })}
+            <button
+              onClick={nextFace}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-fg3/30 text-fg2 hover:border-accent hover:text-accent transition text-sm"
+              title="下一面（→ 鍵）"
+            >
+              →
+            </button>
+          </div>
+
+          <div className="w-full max-w-2xl relative">
+            {/* 無底圖時顯示佔位提示 */}
+            {!faceHasImage && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-bg3/80 rounded-xl pointer-events-none">
+                <p className="text-fg3 font-mono text-sm">📷 {FACE_LABELS[faceId]}底圖尚未設定</p>
+                <p className="text-fg3/60 font-mono text-xs mt-1">
+                  請準備 short_sleeve_{faceId}_{colorId}.png 並放入 public/templates/
+                </p>
+              </div>
+            )}
+
             <svg
               ref={svgRef}
               viewBox={`0 0 ${TEMPLATE_W} ${TEMPLATE_H}`}
@@ -444,167 +517,158 @@ export default function MockupPreview({
               onPointerCancel={endInteraction}
               style={{ touchAction: "none" }}
             >
-              {/* T 恤底圖 */}
+              {/* T 恤底圖（當前面） */}
               <image
-                href={teeColor.imagePath}
+                href={faceImageSrc}
                 x={0}
                 y={0}
                 width={TEMPLATE_W}
                 height={TEMPLATE_H}
               />
-              {/* 印製範圍提示框（含 printArea.rotation） */}
-              <g
-                transform={
-                  position.printArea.rotation
-                    ? `rotate(${position.printArea.rotation}, ${position.printArea.x + position.printArea.width / 2}, ${position.printArea.y + position.printArea.height / 2})`
-                    : undefined
-                }
-              >
-                <rect
-                  x={position.printArea.x}
-                  y={position.printArea.y}
-                  width={position.printArea.width}
-                  height={position.printArea.height}
-                  fill="none"
-                  stroke="rgba(232, 67, 42, 0.35)"
-                  strokeWidth="3"
-                  strokeDasharray="12 8"
-                />
-              </g>
 
-              {/* 設計圖（含可選的白底/黑底 underbase） — 套上 printArea.rotation + user 旋轉 */}
-              <g
-                transform={`translate(${designCx}, ${designCy}) rotate(${(position.printArea.rotation || 0) + imgRotation})`}
-                onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
-                style={{
-                  cursor: position.freelyMovable
-                    ? interaction === "drag" ? "grabbing" : "grab"
-                    : "default",
-                }}
-              >
-                {printMode === "white_plate" && (
-                  <rect
-                    x={-finalW / 2}
-                    y={-finalH / 2}
-                    width={finalW}
-                    height={finalH}
-                    fill="white"
-                  />
-                )}
-                {printMode === "black_plate" && (
-                  <rect
-                    x={-finalW / 2}
-                    y={-finalH / 2}
-                    width={finalW}
-                    height={finalH}
-                    fill="black"
-                  />
-                )}
-                <image
-                  href={renderUrl}
-                  x={-finalW / 2}
-                  y={-finalH / 2}
-                  width={finalW}
-                  height={finalH}
-                  preserveAspectRatio="xMidYMid meet"
-                />
-              </g>
+              {/* 只有當前面有 printArea 時才顯示設計圖和互動元素 */}
+              {position.face === faceId && (
+                <>
+                  {/* 印製範圍提示框 */}
+                  <g
+                    transform={
+                      position.printArea.rotation
+                        ? `rotate(${position.printArea.rotation}, ${position.printArea.x + position.printArea.width / 2}, ${position.printArea.y + position.printArea.height / 2})`
+                        : undefined
+                    }
+                  >
+                    <rect
+                      x={position.printArea.x}
+                      y={position.printArea.y}
+                      width={position.printArea.width}
+                      height={position.printArea.height}
+                      fill="none"
+                      stroke="rgba(232, 67, 42, 0.35)"
+                      strokeWidth="3"
+                      strokeDasharray="12 8"
+                    />
+                  </g>
 
-              {/* Handles — 固定位置 (freelyMovable=false) 不顯示 */}
-              {position.freelyMovable && (
-              <g pointerEvents="all">
-                {/* 旋轉桿 */}
-                <line
-                  x1={rotateLineBase.x}
-                  y1={rotateLineBase.y}
-                  x2={rotateScreen.x}
-                  y2={rotateScreen.y}
-                  stroke="#E8432A"
-                  strokeWidth="3"
-                  strokeDasharray="6 4"
-                />
-                <circle
-                  cx={rotateScreen.x}
-                  cy={rotateScreen.y}
-                  r={28}
-                  fill="#E8432A"
-                  stroke="white"
-                  strokeWidth={4}
-                  style={{ cursor: "grab" }}
-                  onPointerDown={(e) => beginInteraction("rotate", e)}
-                />
-                <text
-                  x={rotateScreen.x}
-                  y={rotateScreen.y}
-                  fill="white"
-                  fontSize={28}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  pointerEvents="none"
-                >
-                  ↻
-                </text>
-                {/* 縮放 handle (右下) */}
-                <rect
-                  x={brScreen.x - 22}
-                  y={brScreen.y - 22}
-                  width={44}
-                  height={44}
-                  rx={6}
-                  fill="#E8432A"
-                  stroke="white"
-                  strokeWidth={4}
-                  style={{ cursor: "nwse-resize" }}
-                  onPointerDown={(e) => beginInteraction("resize", e)}
-                />
-                <text
-                  x={brScreen.x}
-                  y={brScreen.y}
-                  fill="white"
-                  fontSize={26}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  pointerEvents="none"
-                >
-                  ⤡
-                </text>
-              </g>
+                  {/* 設計圖（含可選的白底/黑底 underbase） */}
+                  <g
+                    transform={`translate(${designCx}, ${designCy}) rotate(${(position.printArea.rotation || 0) + imgRotation})`}
+                    onPointerDown={position.freelyMovable ? (e) => beginInteraction("drag", e) : undefined}
+                    style={{
+                      cursor: position.freelyMovable
+                        ? interaction === "drag" ? "grabbing" : "grab"
+                        : "default",
+                    }}
+                  >
+                    {printMode === "white_plate" && (
+                      <rect x={-finalW / 2} y={-finalH / 2} width={finalW} height={finalH} fill="white" />
+                    )}
+                    {printMode === "black_plate" && (
+                      <rect x={-finalW / 2} y={-finalH / 2} width={finalW} height={finalH} fill="black" />
+                    )}
+                    <image
+                      href={renderUrl}
+                      x={-finalW / 2}
+                      y={-finalH / 2}
+                      width={finalW}
+                      height={finalH}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  </g>
+
+                  {/* Handles — 固定位置不顯示 */}
+                  {position.freelyMovable && (
+                    <g pointerEvents="all">
+                      <line
+                        x1={rotateLineBase.x} y1={rotateLineBase.y}
+                        x2={rotateScreen.x} y2={rotateScreen.y}
+                        stroke="#E8432A" strokeWidth="3" strokeDasharray="6 4"
+                      />
+                      <circle
+                        cx={rotateScreen.x} cy={rotateScreen.y} r={28}
+                        fill="#E8432A" stroke="white" strokeWidth={4}
+                        style={{ cursor: "grab" }}
+                        onPointerDown={(e) => beginInteraction("rotate", e)}
+                      />
+                      <text
+                        x={rotateScreen.x} y={rotateScreen.y}
+                        fill="white" fontSize={28} textAnchor="middle" dominantBaseline="central"
+                        pointerEvents="none"
+                      >
+                        ↻
+                      </text>
+                      <rect
+                        x={brScreen.x - 22} y={brScreen.y - 22} width={44} height={44} rx={6}
+                        fill="#E8432A" stroke="white" strokeWidth={4}
+                        style={{ cursor: "nwse-resize" }}
+                        onPointerDown={(e) => beginInteraction("resize", e)}
+                      />
+                      <text
+                        x={brScreen.x} y={brScreen.y}
+                        fill="white" fontSize={26} textAnchor="middle" dominantBaseline="central"
+                        pointerEvents="none"
+                      >
+                        ⤡
+                      </text>
+                    </g>
+                  )}
+
+                  {/* 浮水印 */}
+                  <g
+                    transform={`translate(${position.printArea.x},${position.printArea.y})`}
+                    opacity="0.18"
+                    pointerEvents="none"
+                  >
+                    <g transform={`rotate(-25 ${position.printArea.width / 2} ${position.printArea.height / 2})`}>
+                      <text
+                        x={position.printArea.width / 2}
+                        y={position.printArea.height / 2}
+                        fontFamily="sans-serif"
+                        fontWeight="bold"
+                        fontSize={Math.min(position.printArea.width, position.printArea.height) * 0.18}
+                        fill="white"
+                        stroke="rgba(0,0,0,0.3)"
+                        strokeWidth="1"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        letterSpacing="2"
+                      >
+                        LOBSTER
+                      </text>
+                    </g>
+                  </g>
+                </>
               )}
 
-              {/* 浮水印（蓋在 printArea 內） */}
-              <g
-                transform={`translate(${position.printArea.x},${position.printArea.y})`}
-                opacity="0.18"
-                pointerEvents="none"
-              >
-                <g
-                  transform={`rotate(-25 ${position.printArea.width / 2} ${position.printArea.height / 2})`}
+              {/* 選擇的位置不在當前面時：顯示提示文字 */}
+              {position.face !== faceId && (
+                <text
+                  x={TEMPLATE_W / 2}
+                  y={TEMPLATE_H / 2}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={40}
+                  fill="rgba(255,255,255,0.3)"
+                  fontFamily="sans-serif"
+                  pointerEvents="none"
                 >
-                  <text
-                    x={position.printArea.width / 2}
-                    y={position.printArea.height / 2}
-                    fontFamily="sans-serif"
-                    fontWeight="bold"
-                    fontSize={Math.min(position.printArea.width, position.printArea.height) * 0.18}
-                    fill="white"
-                    stroke="rgba(0,0,0,0.3)"
-                    strokeWidth="1"
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    letterSpacing="2"
-                  >
-                    LOBSTER
-                  </text>
-                </g>
-              </g>
+                  {FACE_LABELS[faceId]}視角
+                </text>
+              )}
             </svg>
-            <p className="text-center text-xs font-mono text-fg3 mt-3">
-              💡 拖曳設計移動 · 拉右下紅角縮放 · 拉上方圓圈旋轉
-            </p>
+
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs font-mono text-fg3">
+                💡 拖曳設計移動 · 拉右下紅角縮放 · 拉上方圓圈旋轉
+              </p>
+              <p className="text-xs font-mono text-fg3/60">
+                ← → 鍵切換視角
+              </p>
+            </div>
+
             {preprocessing && (
               <p className="text-center text-xs font-mono text-fg3 mt-1">
-                ⏳ 正在處理透明去背... ({" "}
-                <span className="text-accent">透明模式</span> 暫不可選 )
+                ⏳ 正在處理透明去背...（{" "}
+                <span className="text-accent">透明模式</span> 暫不可選 ）
               </p>
             )}
           </div>

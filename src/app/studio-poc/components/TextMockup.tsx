@@ -455,7 +455,7 @@ export default function TextMockup({ onBack }: Props) {
             >
               {/* T 恤底圖 */}
               <image
-                href={teeColor.imagePath}
+                href={teeColor.faceImages.front ?? ""}
                 x={0}
                 y={0}
                 width={TEMPLATE_W}

@@ -1,17 +1,36 @@
 /**
- * POC 模板資料（為未來多模板/多顏色擴充而設計的結構）
+ * POC 模板資料 — 支援四面視角（正/左/背/右）
  *
- * 模板圖實際尺寸：1086 × 1448 px（真實 T 恤產品照）
+ * 底圖命名規則（放到 public/templates/ 目錄）：
+ *   short_sleeve_{face}_{color}.png
+ *   face  = front | left | back | right
+ *   color = white | black
  *
- * 座標推算基準（假設值，第一次合成後可微調）：
- *   - T 恤本體可視寬度 ≈ 750 px（中心 x ≈ 543）
- *   - 1 cm ≈ 15 px（依 50cm 胸寬反推）
- *   - 領口下緣 ≈ y=210
- *   - 胸口印製區頂端起點 ≈ y=350（領口下方 10cm）
+ * 例：
+ *   public/templates/short_sleeve_front_white.png  ← 已有
+ *   public/templates/short_sleeve_front_black.png  ← 已有
+ *   public/templates/short_sleeve_left_white.png   ← 使用者準備後放入
+ *   public/templates/short_sleeve_back_white.png   ← 同上
+ *   public/templates/short_sleeve_right_white.png  ← 同上
+ *   (黑色同理)
  *
- * 目前實作：短袖正面 × 白/黑 × 6 個位置（A-F）
- * 為將來保留結構：colors[] 與 positions[] 都是陣列，可擴充
+ * 位置 face 欄位說明：
+ *   標示該印製位置要在「哪個面」的底圖上顯示。
+ *   PrintArea 座標必須對應該面的底圖像素位置。
+ *   新增左/背/右位置時，先在後台 /studio-poc/admin/positions 切換到該面、
+ *   拖曳校準，再 Export JSON 貼回 POSITIONS。
  */
+
+export type Face = "front" | "left" | "back" | "right";
+
+export const FACES: Face[] = ["front", "left", "back", "right"];
+
+export const FACE_LABELS: Record<Face, string> = {
+  front: "正面",
+  left: "左側",
+  back: "背面",
+  right: "右側",
+};
 
 export interface PrintArea {
   x: number;
@@ -27,11 +46,11 @@ export interface PrintPosition {
   label: string;        // 顯示名稱
   sizeCm: string;       // "29×42 cm"
   description: string;  // 一句話補充
+  /** 此位置顯示在哪個面的底圖上（PrintArea 座標對應該面圖片） */
+  face: Face;
   printArea: PrintArea;
-  /** 是否允許自由拖曳 / 縮放 / 旋轉。
-   *  true  = 大型印製區（A大圖/B中圖/C橫向），允許客戶在框內微調
-   *  false = 小型固定位置（D胸口小/E左胸/F左袖），自動置中於 printArea，
-   *          不可拖曳（避免歪掉、避免印到衣服外） */
+  /** true = 大型印製區，客戶可在框內自由拖曳縮放旋轉
+   *  false = 小型固定位置，自動置中、不可拖曳 */
   freelyMovable: boolean;
 }
 
@@ -39,26 +58,30 @@ export interface TemplateColor {
   id: string;           // "white" | "black"
   label: string;        // "白色"
   hex: string;          // 顯示用色票
-  imagePath: string;    // 模板底圖
-  darkShirt?: boolean;  // 是否為深色衣 → 啟用白底襯印製模式（不去背）
+  /** 各面底圖路徑；front 必填，其餘備齊後填入 */
+  faceImages: Partial<Record<Face, string>>;
+  darkShirt?: boolean;  // 深色衣 → 啟用白底襯印製模式
 }
 
 export interface TemplateModel {
   id: string;           // "short_sleeve_front"
-  label: string;        // "短袖 T 恤 - 正面"
+  label: string;        // "短袖 T 恤"
   colors: TemplateColor[];
   positions: PrintPosition[];
 }
 
-// ── 正面 6 個印製位置（依參考圖 A-F） ──
-// 模板 1086×1448，T 恤中心 x ≈ 543，1cm ≈ 15px
-// 經用戶用 /studio-poc/admin/positions 視覺調整後匯出的座標
-const FRONT_POSITIONS: PrintPosition[] = [
+// ── 印製位置定義 ──
+// 座標全部對應 1086×1448 px 的正面底圖，除非 face 明確指定其他面。
+// 目前 A-F 均以正面底圖校準。
+// F（左袖）邏輯上屬於左側面，待使用者提供左側底圖後，
+// 需在後台重新校準座標並改 face: "left"。
+const POSITIONS: PrintPosition[] = [
   {
     id: "A",
     label: "A · 正面大圖",
     sizeCm: "29×42 cm (A3)",
     description: "滿版主視覺",
+    face: "front",
     printArea: { x: 315, y: 527, width: 462, height: 669 },
     freelyMovable: true,
   },
@@ -67,6 +90,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "B · 正面中圖",
     sizeCm: "21×29 cm (A4)",
     description: "中型設計",
+    face: "front",
     printArea: { x: 388, y: 474, width: 315, height: 435 },
     freelyMovable: true,
   },
@@ -75,6 +99,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "C · 正面橫向",
     sizeCm: "15×21 cm",
     description: "橫式 logo / 字樣",
+    face: "front",
     printArea: { x: 394, y: 472, width: 295, height: 413, rotation: -90 },
     freelyMovable: true,
   },
@@ -83,6 +108,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "D · 胸口置中",
     sizeCm: "10×10 cm",
     description: "小 logo 居中",
+    face: "front",
     printArea: { x: 432, y: 397, width: 223, height: 223 },
     freelyMovable: false,
   },
@@ -91,6 +117,7 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "E · 左胸",
     sizeCm: "10×10 cm",
     description: "經典左胸 logo",
+    face: "front",
     printArea: { x: 326, y: 389, width: 179, height: 179 },
     freelyMovable: false,
   },
@@ -99,36 +126,53 @@ const FRONT_POSITIONS: PrintPosition[] = [
     label: "F · 左袖",
     sizeCm: "7×10 cm",
     description: "袖標",
+    face: "front",   // 座標以正面底圖校準；左側底圖備妥後改 "left" 並重新校準
     printArea: { x: 105, y: 383, width: 92, height: 132, rotation: 45 },
     freelyMovable: false,
   },
+  // ── 未來：新增左/背/右位置時在此擴充 ──
+  // {
+  //   id: "G", label: "G · 背面大圖", sizeCm: "29×42 cm", description: "後背主視覺",
+  //   face: "back",
+  //   printArea: { x: ???, y: ???, width: ???, height: ??? },
+  //   freelyMovable: true,
+  // },
 ];
 
 // ── 模板清單 ──
-// POC 階段只開白 T。將來新增黑 T 只要加一筆 color；新增帽 T 加一筆 template。
 export const POC_TEMPLATES: TemplateModel[] = [
   {
     id: "short_sleeve_front",
-    label: "短袖 T 恤 - 正面",
+    label: "短袖 T 恤",
     colors: [
       {
         id: "white",
         label: "白色",
         hex: "#F5F5F0",
-        imagePath: "/templates/short_sleeve_front_white.png",
+        faceImages: {
+          front: "/templates/short_sleeve_front_white.png",
+          // 備妥後解除註解：
+          // left:  "/templates/short_sleeve_left_white.png",
+          // back:  "/templates/short_sleeve_back_white.png",
+          // right: "/templates/short_sleeve_right_white.png",
+        },
         darkShirt: false,
       },
       {
         id: "black",
         label: "黑色",
         hex: "#1A1A1A",
-        imagePath: "/templates/short_sleeve_front_black.png",
-        darkShirt: true,  // 啟用白底襯（模擬 DTG underbase 印製）
+        faceImages: {
+          front: "/templates/short_sleeve_front_black.png",
+          // left:  "/templates/short_sleeve_left_black.png",
+          // back:  "/templates/short_sleeve_back_black.png",
+          // right: "/templates/short_sleeve_right_black.png",
+        },
+        darkShirt: true,
       },
     ],
-    positions: FRONT_POSITIONS,
+    positions: POSITIONS,
   },
-  // 未來：加長袖 / 帽 T 結構同上
 ];
 
 // ── 預設值 ──
@@ -136,7 +180,7 @@ export const DEFAULT_TEMPLATE_ID = "short_sleeve_front";
 export const DEFAULT_COLOR_ID = "white";
 export const DEFAULT_POSITION_ID = "A";
 
-// ── Helper：依 ids 找到實際合成所需的 (imagePath, printArea, slug, darkShirt, freelyMovable) ──
+// ── Helper：依 ids 解析出合成所需資訊 ──
 export interface ResolvedTemplate {
   slug: string;
   imagePath: string;
@@ -156,9 +200,13 @@ export function resolveTemplate(
   if (!color) return null;
   const position = template.positions.find((p) => p.id === positionId);
   if (!position) return null;
+
+  // 優先使用該位置所屬面的底圖；若尚未設定則 fallback 到正面
+  const imagePath = color.faceImages[position.face] ?? color.faceImages.front!;
+
   return {
     slug: `${template.id}_${color.id}_${position.id}`,
-    imagePath: color.imagePath,
+    imagePath,
     printArea: position.printArea,
     darkShirt: color.darkShirt ?? false,
     freelyMovable: position.freelyMovable,

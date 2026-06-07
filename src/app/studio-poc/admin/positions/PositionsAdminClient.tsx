@@ -1,19 +1,26 @@
 "use client";
 
 /**
- * 位置編輯後台 — 拖曳 / 縮放 / 旋轉每個位置框，輸出 JSON 給工程師
+ * 位置編輯後台（含四面視角）
  *
  * 用法：
- *   1. 左側點選一個位置（會在 T 恤上高亮 + 顯示 handles）
- *   2. T 恤上：拖框移動 / 拉右下縮放 / 拉上方圓圈旋轉
- *   3. 右側「📋 Export JSON」按下複製到剪貼簿
- *   4. 把 JSON 貼給工程師（或直接覆寫到 pocTemplate.ts 的 FRONT_POSITIONS）
+ *   1. 頂部切換要編輯的「面」（正面 / 左側 / 背面 / 右側）
+ *   2. 左側點選一個位置（會在 T 恤上高亮 + 顯示 handles）
+ *   3. 設定這個位置屬於哪個面（face 下拉）
+ *   4. T 恤上：拖框移動 / 拉右下縮放 / 拉上方圓圈旋轉
+ *   5. 右側「📋 Export JSON」複製後貼給工程師，覆寫 pocTemplate.ts 的 POSITIONS
+ *
+ * 注意：PrintArea 座標必須以「該位置所屬 face 的底圖」為基準校準。
+ *       切換底圖顏色只是視覺參考，座標不受影響。
  */
 
 import { useRef, useState } from "react";
 import {
   POC_TEMPLATES,
   DEFAULT_TEMPLATE_ID,
+  FACES,
+  FACE_LABELS,
+  type Face,
   type PrintPosition,
 } from "@/lib/poc/pocTemplate";
 
@@ -35,19 +42,23 @@ export default function PositionsAdminClient() {
   const whiteColor = template.colors.find((c) => c.id === "white")!;
   const blackColor = template.colors.find((c) => c.id === "black");
 
-  // 編輯中的位置（複製預設值，可被修改）
   const [positions, setPositions] = useState<PrintPosition[]>(
     () => template.positions.map((p) => ({ ...p, printArea: { ...p.printArea } }))
   );
   const [selectedId, setSelectedId] = useState<string>(positions[0].id);
   const [bgColor, setBgColor] = useState<"white" | "black">("white");
+  const [viewFace, setViewFace] = useState<Face>("front"); // 當前顯示的面
   const [interaction, setInteraction] = useState<InteractionMode>("none");
   const [copied, setCopied] = useState(false);
   const startState = useRef<InteractionStart | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const selected = positions.find((p) => p.id === selectedId)!;
-  const bgImage = bgColor === "black" && blackColor ? blackColor : whiteColor;
+  const colorData = bgColor === "black" && blackColor ? blackColor : whiteColor;
+
+  // 當前面的底圖（無則 fallback 正面）
+  const bgImageSrc = colorData.faceImages[viewFace] ?? colorData.faceImages.front ?? "";
+  const faceHasImage = !!colorData.faceImages[viewFace];
 
   // ── 工具 ──
   function clientToSvg(clientX: number, clientY: number) {
@@ -70,6 +81,12 @@ export default function PositionsAdminClient() {
     );
   }
 
+  function updateSelectedFace(face: Face) {
+    setPositions((prev) =>
+      prev.map((p) => (p.id === selectedId ? { ...p, face } : p))
+    );
+  }
+
   // ── 拖曳 / 縮放 / 旋轉 ──
   function beginInteraction(mode: Exclude<InteractionMode, "none">, e: React.PointerEvent) {
     e.stopPropagation();
@@ -89,9 +106,7 @@ export default function PositionsAdminClient() {
     setInteraction(mode);
     try {
       (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
 
   function handlePointerMove(e: React.PointerEvent) {
@@ -113,7 +128,6 @@ export default function PositionsAdminClient() {
       const ratio = dist / Math.max(s.initialDistance, 1);
       const newW = Math.max(20, Math.round(s.pos.printArea.width * ratio));
       const newH = Math.max(20, Math.round(s.pos.printArea.height * ratio));
-      // 從中心擴張：x/y 也要調整
       const dw = newW - s.pos.printArea.width;
       const dh = newH - s.pos.printArea.height;
       updateSelected({
@@ -145,7 +159,7 @@ export default function PositionsAdminClient() {
     setPositions((prev) =>
       prev.map((p) =>
         p.id === selectedId
-          ? { ...p, printArea: { ...original.printArea } }
+          ? { ...p, face: original.face, printArea: { ...original.printArea } }
           : p
       )
     );
@@ -154,7 +168,7 @@ export default function PositionsAdminClient() {
   function resetAll() {
     if (!confirm("確定要把所有位置重置為原始預設？")) return;
     setPositions(
-      template.positions.map((p) => ({ ...p, printArea: { ...p.printArea } }))
+      template.positions.map((p) => ({ ...p, face: p.face, printArea: { ...p.printArea } }))
     );
   }
 
@@ -172,11 +186,12 @@ export default function PositionsAdminClient() {
         label: p.label,
         sizeCm: p.sizeCm,
         description: p.description,
+        face: p.face,
         printArea: pa,
         freelyMovable: p.freelyMovable,
       };
     });
-    const json = `// Paste this into FRONT_POSITIONS in src/lib/poc/pocTemplate.ts\nconst FRONT_POSITIONS: PrintPosition[] = ${JSON.stringify(cleanPositions, null, 2)};\n`;
+    const json = `// Paste this into POSITIONS in src/lib/poc/pocTemplate.ts\nconst POSITIONS: PrintPosition[] = ${JSON.stringify(cleanPositions, null, 2)};\n`;
     navigator.clipboard.writeText(json).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -191,12 +206,10 @@ export default function PositionsAdminClient() {
   const sinR = Math.sin((rot * Math.PI) / 180);
   const halfW = selected.printArea.width / 2;
   const halfH = selected.printArea.height / 2;
-  // 右下角點
   const brScreen = {
     x: cx + (halfW * cosR - halfH * sinR),
     y: cy + (halfW * sinR + halfH * cosR),
   };
-  // 旋轉 handle 起點（bbox 上方中心 + 70 px 偏移）
   const topOffset = -halfH - 70;
   const rotateScreen = {
     x: cx + (0 * cosR - topOffset * sinR),
@@ -215,7 +228,7 @@ export default function PositionsAdminClient() {
             <span className="text-accent">Lobster</span> Studio · 位置編輯後台
           </h1>
           <p className="text-xs font-mono text-fg3 mt-1">
-            拖移 / 拉角縮放 / 上方圓圈旋轉 · 編好按右下角 Export JSON 給工程師
+            切換「面」選底圖 → 點位置框 → 設定 face → 拖移校準 → Export JSON
           </p>
         </div>
         <a
@@ -226,27 +239,45 @@ export default function PositionsAdminClient() {
         </a>
       </header>
 
+      {/* 面切換列 */}
+      <div className="max-w-7xl mx-auto mb-4 flex items-center gap-2">
+        <span className="text-xs font-mono text-fg3 mr-1">底圖視角：</span>
+        {FACES.map((face) => {
+          const hasImg = !!colorData.faceImages[face];
+          return (
+            <button
+              key={face}
+              onClick={() => setViewFace(face)}
+              className={`px-3 py-1.5 rounded border text-xs font-mono transition ${
+                viewFace === face
+                  ? "border-accent bg-accent/10 text-accent font-bold"
+                  : "border-fg3/30 text-fg2 hover:border-fg2"
+              } ${!hasImg ? "opacity-40" : ""}`}
+              title={hasImg ? undefined : "底圖尚未設定"}
+            >
+              {FACE_LABELS[face]}
+              {!hasImg && <span className="ml-1 text-[8px]">○</span>}
+            </button>
+          );
+        })}
+        <span className="text-xs font-mono text-fg3 ml-2">底圖色：</span>
+        <button
+          onClick={() => setBgColor("white")}
+          className={`px-3 py-1.5 rounded border text-xs font-mono ${bgColor === "white" ? "border-accent bg-accent/10 text-fg" : "border-fg3/30 text-fg2"}`}
+        >
+          白 T
+        </button>
+        <button
+          onClick={() => setBgColor("black")}
+          className={`px-3 py-1.5 rounded border text-xs font-mono ${bgColor === "black" ? "border-accent bg-accent/10 text-fg" : "border-fg3/30 text-fg2"}`}
+        >
+          黑 T
+        </button>
+      </div>
+
       <div className="max-w-7xl mx-auto grid lg:grid-cols-[320px_1fr] gap-6">
         {/* ── 左側控制台 ── */}
         <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4 space-y-4 lg:max-h-[85vh] lg:overflow-y-auto">
-          {/* 背景色切換 */}
-          <div>
-            <p className="text-xs font-mono text-fg3 uppercase mb-2">底圖顏色</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setBgColor("white")}
-                className={`px-3 py-1.5 rounded border text-sm ${bgColor === "white" ? "border-accent bg-accent/10 text-fg" : "border-fg3/30 text-fg2"}`}
-              >
-                白 T
-              </button>
-              <button
-                onClick={() => setBgColor("black")}
-                className={`px-3 py-1.5 rounded border text-sm ${bgColor === "black" ? "border-accent bg-accent/10 text-fg" : "border-fg3/30 text-fg2"}`}
-              >
-                黑 T
-              </button>
-            </div>
-          </div>
 
           {/* 位置清單 */}
           <div>
@@ -264,7 +295,14 @@ export default function PositionsAdminClient() {
                         : "border-fg3/30 bg-bg3/40 hover:border-fg2 text-fg"
                     }`}
                   >
-                    <div className="font-display font-bold">{p.label}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-display font-bold">{p.label}</span>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                        p.face === viewFace ? "bg-accent/20 text-accent" : "bg-bg3 text-fg3"
+                      }`}>
+                        {FACE_LABELS[p.face]}
+                      </span>
+                    </div>
                     <div className="text-[10px] font-mono text-fg3 mt-0.5">
                       x={p.printArea.x} y={p.printArea.y} {p.printArea.width}×{p.printArea.height}
                       {p.printArea.rotation ? ` ${p.printArea.rotation}°` : ""}
@@ -275,7 +313,32 @@ export default function PositionsAdminClient() {
             </div>
           </div>
 
-          {/* 選中位置的精確數值 */}
+          {/* 選中位置的 face 設定 */}
+          <div>
+            <p className="text-xs font-mono text-fg3 uppercase mb-2">
+              所屬面（{selected.label}）
+            </p>
+            <div className="grid grid-cols-2 gap-1">
+              {FACES.map((face) => (
+                <button
+                  key={face}
+                  onClick={() => updateSelectedFace(face)}
+                  className={`px-2 py-1.5 rounded border text-xs font-mono transition ${
+                    selected.face === face
+                      ? "border-accent bg-accent/10 text-accent font-bold"
+                      : "border-fg3/30 text-fg2 hover:border-fg2"
+                  }`}
+                >
+                  {FACE_LABELS[face]}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] font-mono text-fg3 mt-1.5 leading-tight">
+              ⚠️ 改 face 後需切換到該面底圖重新校準座標
+            </p>
+          </div>
+
+          {/* 精確數值 */}
           <div>
             <p className="text-xs font-mono text-fg3 uppercase mb-2">
               精確數值（{selected.label}）
@@ -324,11 +387,26 @@ export default function PositionsAdminClient() {
             >
               {copied ? "✓ 已複製到剪貼簿" : "📋 Export JSON"}
             </button>
+            <p className="text-[9px] font-mono text-fg3 text-center leading-tight">
+              複製後貼到 pocTemplate.ts 的 POSITIONS 陣列
+            </p>
           </div>
         </div>
 
         {/* ── 右側 T 恤編輯區 ── */}
-        <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4">
+        <div className="bg-bg2 border border-fg3/20 rounded-2xl p-4 relative">
+          {/* 無底圖提示 */}
+          {!faceHasImage && (
+            <div className="absolute inset-4 z-10 flex flex-col items-center justify-center bg-bg3/90 rounded-xl border border-dashed border-fg3/40">
+              <p className="text-fg3 font-mono text-sm">📷 {FACE_LABELS[viewFace]}底圖尚未設定</p>
+              <p className="text-fg3/60 font-mono text-xs mt-2 text-center px-6">
+                請將圖片放到：<br />
+                <code className="text-accent/80">public/templates/short_sleeve_{viewFace}_{bgColor}.png</code><br />
+                再解除 pocTemplate.ts 中的對應註解
+              </p>
+            </div>
+          )}
+
           <svg
             ref={svgRef}
             viewBox={`0 0 ${TEMPLATE_W} ${TEMPLATE_H}`}
@@ -341,18 +419,13 @@ export default function PositionsAdminClient() {
             style={{ touchAction: "none" }}
           >
             {/* T 恤底圖 */}
-            <image
-              href={bgImage.imagePath}
-              x={0}
-              y={0}
-              width={TEMPLATE_W}
-              height={TEMPLATE_H}
-            />
+            <image href={bgImageSrc} x={0} y={0} width={TEMPLATE_W} height={TEMPLATE_H} />
 
-            {/* 所有位置框 */}
+            {/* 所有位置框 — 同面的顯示，不同面的淡顯 */}
             {positions.map((p) => {
               const isSelected = p.id === selectedId;
-              const opacity = isSelected ? 0.6 : 0.25;
+              const sameFace = p.face === viewFace;
+              const opacity = isSelected ? 0.6 : sameFace ? 0.25 : 0.08;
               return (
                 <g
                   key={p.id}
@@ -395,13 +468,8 @@ export default function PositionsAdminClient() {
             {/* 選中框的拖移層 + handles */}
             {selected && (
               <>
-                {/* 拖移層 — 覆蓋整個選中框，用來接 pointer */}
                 <g
-                  transform={
-                    rot
-                      ? `rotate(${rot}, ${cx}, ${cy})`
-                      : undefined
-                  }
+                  transform={rot ? `rotate(${rot}, ${cx}, ${cy})` : undefined}
                 >
                   <rect
                     x={selected.printArea.x}
@@ -414,58 +482,33 @@ export default function PositionsAdminClient() {
                   />
                 </g>
 
-                {/* 旋轉桿 + handle */}
                 <line
-                  x1={rotateLineBase.x}
-                  y1={rotateLineBase.y}
-                  x2={rotateScreen.x}
-                  y2={rotateScreen.y}
-                  stroke="#E8432A"
-                  strokeWidth={3}
-                  strokeDasharray="6 4"
+                  x1={rotateLineBase.x} y1={rotateLineBase.y}
+                  x2={rotateScreen.x} y2={rotateScreen.y}
+                  stroke="#E8432A" strokeWidth={3} strokeDasharray="6 4"
                 />
                 <circle
-                  cx={rotateScreen.x}
-                  cy={rotateScreen.y}
-                  r={28}
-                  fill="#E8432A"
-                  stroke="white"
-                  strokeWidth={4}
+                  cx={rotateScreen.x} cy={rotateScreen.y} r={28}
+                  fill="#E8432A" stroke="white" strokeWidth={4}
                   style={{ cursor: "grab" }}
                   onPointerDown={(e) => beginInteraction("rotate", e)}
                 />
                 <text
-                  x={rotateScreen.x}
-                  y={rotateScreen.y}
-                  fill="white"
-                  fontSize={28}
-                  textAnchor="middle"
-                  dominantBaseline="central"
+                  x={rotateScreen.x} y={rotateScreen.y}
+                  fill="white" fontSize={28} textAnchor="middle" dominantBaseline="central"
                   pointerEvents="none"
                 >
                   ↻
                 </text>
-
-                {/* 縮放 handle */}
                 <rect
-                  x={brScreen.x - 22}
-                  y={brScreen.y - 22}
-                  width={44}
-                  height={44}
-                  rx={6}
-                  fill="#E8432A"
-                  stroke="white"
-                  strokeWidth={4}
+                  x={brScreen.x - 22} y={brScreen.y - 22} width={44} height={44} rx={6}
+                  fill="#E8432A" stroke="white" strokeWidth={4}
                   style={{ cursor: "nwse-resize" }}
                   onPointerDown={(e) => beginInteraction("resize", e)}
                 />
                 <text
-                  x={brScreen.x}
-                  y={brScreen.y}
-                  fill="white"
-                  fontSize={26}
-                  textAnchor="middle"
-                  dominantBaseline="central"
+                  x={brScreen.x} y={brScreen.y}
+                  fill="white" fontSize={26} textAnchor="middle" dominantBaseline="central"
                   pointerEvents="none"
                 >
                   ⤡
