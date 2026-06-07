@@ -4,10 +4,18 @@
  * Phase 6 用途：MockupPreview 改成 SVG 客戶端即時渲染後，「透明去背」
  * 模式需要一張真的去背的 PNG。在進入編輯前一次性處理，後續所有
  * 拖曳 / 縮放 / 旋轉 / 換 T 恤顏色都不必再打 API。
+ *
+ * 使用 flood-fill 邊緣連通去白：只去除從四周連通的白色區域，
+ * 設計圖內部封閉的白色（白毛、白字）完全保留。
+ *
+ * 回傳額外欄位 coverageRatio（0-1）：可見像素佔比。
+ * 若 < COVERAGE_WARN_THRESHOLD，代表去背效果可能過度，
+ * 前端可據此自動改用「加白底」模式。
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPocKey, getPocKey } from "@/lib/poc/accessKey";
+import { removeWhiteBg } from "@/lib/removeWhiteBg";
 import sharp from "sharp";
 import { storage } from "@/lib/storage";
 
@@ -15,13 +23,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
+/** 可見像素低於此比例時視為「去背過度」，建議前端改用加白底 */
+const COVERAGE_WARN_THRESHOLD = 0.15;
+
 async function loadImage(url: string): Promise<Buffer> {
   if (url.startsWith("http")) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to fetch: ${url}`);
     return Buffer.from(await res.arrayBuffer());
   }
-  // local relative path
   const baseUrl =
     process.env.NEXTAUTH_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -31,28 +41,22 @@ async function loadImage(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/**
- * 強化版去白底（取代舊的「greyscale + negate」線性版本）
- *
- * 舊版問題：近白色 (#F5F5F5、#FAFAFA) 仍留淺灰、不夠透明
- *
- * 新版做法：
- *  1. greyscale → 取亮度通道
- *  2. normalise → 強制把整張圖的亮度範圍拉到 0-255
- *  3. linear(1.4, -40) → 加強對比（淺色變更白、深色變更黑）
- *  4. negate → 翻轉成 alpha (白→0透明、黑→255不透明)
- *
- * 效果：背景純白 / 近白色 → 完全透明、design 邊緣保留適度抗鋸齒
- */
-async function removeWhiteBg(buffer: Buffer): Promise<Buffer> {
-  const mask = await sharp(buffer)
-    .greyscale()
-    .normalise()                // 拉伸對比 → 抹掉淺灰背景
-    .linear(1.4, -40)           // 進一步增強對比 (slope, intercept)
-    .negate()
-    .toBuffer();
-  const rgb = await sharp(buffer).removeAlpha().toBuffer();
-  return sharp(rgb).joinChannel(mask).png().toBuffer();
+/** 計算透明圖中「可見像素」的比例（alpha > 32 視為可見） */
+async function calcCoverageRatio(buffer: Buffer): Promise<number> {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const total = info.width * info.height;
+  if (total === 0) return 0;
+
+  let visible = 0;
+  const px = new Uint8Array(data.buffer);
+  for (let i = 0; i < total; i++) {
+    if (px[i * 4 + 3] > 32) visible++;
+  }
+  return visible / total;
 }
 
 export async function POST(req: NextRequest) {
@@ -73,9 +77,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const buf = await loadImage(url);
+
+    // flood-fill 去白底（只去邊緣連通的白色，保留內部白色）
     const transparentBuf = await removeWhiteBg(buf);
 
-    // 取得圖片尺寸資訊（給前端做 aspect ratio 計算）
+    // 計算可見像素佔比（判斷是否去背過度）
+    const coverageRatio = await calcCoverageRatio(transparentBuf);
+    const tooTransparent = coverageRatio < COVERAGE_WARN_THRESHOLD;
+
     const meta = await sharp(transparentBuf).metadata();
 
     const ts = Date.now();
@@ -88,6 +97,8 @@ export async function POST(req: NextRequest) {
       transparentUrl: publicUrl,
       width: meta.width || 0,
       height: meta.height || 0,
+      coverageRatio: Math.round(coverageRatio * 100) / 100,
+      tooTransparent,
     });
   } catch (err) {
     return NextResponse.json(

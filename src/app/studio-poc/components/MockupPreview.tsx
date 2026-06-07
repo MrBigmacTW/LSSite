@@ -80,6 +80,7 @@ export default function MockupPreview({
   const [imgH, setImgH] = useState(0);
   const [preprocessing, setPreprocessing] = useState(true);
   const [preprocessError, setPreprocessError] = useState("");
+  const [tooTransparentWarning, setTooTransparentWarning] = useState(false);
 
   // Free transform 狀態
   const [imgOffset, setImgOffset] = useState({ x: 0, y: 0 });
@@ -143,6 +144,11 @@ export default function MockupPreview({
           setTransparentUrl(data.transparentUrl);
           setImgW(data.width || 1024);
           setImgH(data.height || 1024);
+          // 去背過度（設計圖主色接近白色）→ 自動改用加白底
+          if (data.tooTransparent) {
+            setTooTransparentWarning(true);
+            setPrintMode("white_plate");
+          }
         }
       } catch (e) {
         if (!cancelled)
@@ -375,6 +381,11 @@ export default function MockupPreview({
             </div>
             {preprocessError && (
               <p className="text-xs text-accent mt-1">⚠️ 透明去背失敗：{preprocessError}</p>
+            )}
+            {tooTransparentWarning && (
+              <p className="text-xs text-yellow-400/80 mt-1">
+                💡 設計圖主色接近白色，已自動切換為「加白底」避免消失
+              </p>
             )}
           </div>
 
