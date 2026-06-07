@@ -150,11 +150,10 @@ export const POC_TEMPLATES: TemplateModel[] = [
         label: "白色",
         hex: "#F5F5F0",
         faceImages: {
-          front: "/templates/short_sleeve_front_white.png",
-          // 備妥後解除註解：
-          // left:  "/templates/short_sleeve_left_white.png",
-          // back:  "/templates/short_sleeve_back_white.png",
-          // right: "/templates/short_sleeve_right_white.png",
+          front: "/templates/w_front.png",
+          left:  "/templates/w_left.png",
+          back:  "/templates/w_back.png",
+          right: "/templates/w_right.png",
         },
         darkShirt: false,
       },
