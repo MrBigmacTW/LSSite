@@ -12,6 +12,7 @@
  */
 
 import sharp from "sharp";
+import { removeWhiteBg } from "../removeWhiteBg";
 
 interface PrintArea {
   x: number;
@@ -52,16 +53,6 @@ async function loadImage(imagePath: string): Promise<Buffer> {
     if (!res.ok) throw new Error(`Failed to fetch: ${baseUrl}${imagePath}`);
     return Buffer.from(await res.arrayBuffer());
   }
-}
-
-/**
- * 去白底：與 mockup-engine 的演算法一致
- * greyscale + negate 當 alpha mask，白色 → 透明、深色 → 不透明
- */
-async function removeWhiteBg(buffer: Buffer): Promise<Buffer> {
-  const mask = await sharp(buffer).greyscale().negate().toBuffer();
-  const rgb = await sharp(buffer).removeAlpha().toBuffer();
-  return sharp(rgb).joinChannel(mask).png().toBuffer();
 }
 
 /**

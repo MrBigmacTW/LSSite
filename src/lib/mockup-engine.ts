@@ -5,6 +5,7 @@
 
 import sharp from "sharp";
 import { storage } from "./storage";
+import { removeWhiteBg } from "./removeWhiteBg";
 
 interface PrintArea {
   x: number;
@@ -41,32 +42,6 @@ async function loadImage(imagePath: string): Promise<Buffer> {
 }
 
 /**
- * 去白背景：灰階反轉直接當 alpha
- * 白(255) → negate → 0 = 完全透明
- * 深色(0) → negate → 255 = 完全不透明
- * 中間顏色保留自然漸變，抗鋸齒佳
- */
-async function removeWhiteBackground(buffer: Buffer): Promise<Buffer> {
-  // alpha mask：greyscale + negate，白=0(透明)，深色=255(不透明)
-  const mask = await sharp(buffer)
-    .greyscale()
-    .negate()
-    .toBuffer();
-
-  const rgb = await sharp(buffer)
-    .removeAlpha()
-    .toBuffer();
-
-  const result = await sharp(rgb)
-    .joinChannel(mask)
-    .png()
-    .toBuffer();
-
-  console.log("  白背景已移除");
-  return result;
-}
-
-/**
  * 合成單一 Mockup
  */
 export async function composeMockup(
@@ -76,7 +51,7 @@ export async function composeMockup(
   const { x, y, width, height } = template.printArea;
 
   // 去白背景
-  const cleanDesign = await removeWhiteBackground(designBuffer);
+  const cleanDesign = await removeWhiteBg(designBuffer);
 
   // Resize 到 printArea 大小
   const resizedDesign = await sharp(cleanDesign)
